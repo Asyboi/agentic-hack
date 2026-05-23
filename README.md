@@ -1,4 +1,4 @@
-# policyguard
+# PolicyGuard
 
 **Pre-flight compliance for AI agents acting on the open web.**
 
