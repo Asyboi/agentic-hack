@@ -518,10 +518,10 @@ PolicyGuard is one API story with four sponsor integrations in a single pipeline
 
 | Person | Owns |
 |---|---|
-| **Aslan** | x402 paywall + Base Sepolia wallet |
-| **Kyle** | Marketplace buyer flow + Nimble policy fetch |
+| **Kyle** | x402 paywall + Base Sepolia wallet |
+| **Aslan** | Marketplace buyer flow + Nimble policy fetch |
 | **Aarya** | API core (`/evaluate`, `/research`), pipeline, rule engine, ClickHouse, deploy |
-| **Candy** | Senso integration (KB, search, cited.md publish), demo coordination |
+| **Candy** | Senso integration (KB, search, cited.md publish), demo UI |
 
 ---
 
