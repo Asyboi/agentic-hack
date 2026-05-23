@@ -6,6 +6,8 @@
 
 ## Live demo
 
+- **Interactive UI:** run `npm run dev` → open the URL Next prints (often http://localhost:3000) — three scenario buttons → live verdicts
+- **Live Senso test (no mocks):** `npm run test:senso` with `POLICYGUARD_DEMO_MODE=false` in `.env`
 - **Marketing site (source):** [`site/index.html`](site/index.html) → deployed at https://policyguard-site.vercel.app  
   After pulling this repo, set Vercel project **Root Directory** to `site` if redeploying from GitHub.
 - **API:** `POST /api/evaluate` (Next.js app in this repo — deploy separately on Vercel)

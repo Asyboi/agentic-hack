@@ -3,15 +3,30 @@ import { DEMO_VERDICTS, DEMO_REQUESTS } from "@/lib/demo-fixtures";
 import { evaluateRules, normalizeExtractedRules } from "@/lib/rule-engine";
 import type { EvaluateRequest } from "@/lib/schemas/evaluate-request";
 import type { Verdict } from "@/lib/schemas/verdict";
+import { fetchPolicyPages, hashPolicyContent } from "@/lib/nimble";
+import type { PolicyChunk } from "@/lib/senso";
 import { searchPolicy } from "@/lib/senso";
 import { generateVerdictFromChunks } from "@/lib/verdict-llm";
 import { publishVerdictToCited } from "@/lib/verdict-publish";
 
+export type PipelineMeta = {
+  mode: "demo_fixture" | "senso_kb" | "nimble_live" | "rules_only";
+  demo_mode: boolean;
+  nimble_pages_fetched: number;
+  senso_chunks: number;
+};
+
 export type PipelineOptions = {
   demoKey?: keyof typeof DEMO_REQUESTS;
   skipSenso?: boolean;
+  skipNimble?: boolean;
   skipLlm?: boolean;
   skipPublish?: boolean;
+};
+
+export type PipelineResult = {
+  verdict: Verdict;
+  meta: PipelineMeta;
 };
 
 /**
@@ -26,7 +41,7 @@ export type PipelineOptions = {
 export async function runEvaluatePipeline(
   request: EvaluateRequest,
   options: PipelineOptions = {}
-): Promise<Verdict> {
+): Promise<PipelineResult> {
   const demoMode = process.env.POLICYGUARD_DEMO_MODE === "true";
 
   if (demoMode && options.demoKey && DEMO_VERDICTS[options.demoKey]) {
@@ -34,23 +49,55 @@ export async function runEvaluatePipeline(
       ...DEMO_VERDICTS[options.demoKey],
       decision_id: `dec_${randomUUID().slice(0, 8)}`,
     };
-    return finalizeVerdict(request, fixture, options);
+    const verdict = await finalizeVerdict(request, fixture, options);
+    return {
+      verdict,
+      meta: {
+        mode: "demo_fixture",
+        demo_mode: true,
+        nimble_pages_fetched: 0,
+        senso_chunks: 0,
+      },
+    };
   }
 
   const actionDescription =
     request.intended_action.description ??
     `${request.intended_action.action_type} on ${request.target.name}`;
 
-  let chunks: Awaited<ReturnType<typeof searchPolicy>> = [];
+  let nimblePages: Awaited<ReturnType<typeof fetchPolicyPages>> = [];
+  if (!options.skipNimble && request.target.policy_urls.length > 0) {
+    nimblePages = await fetchPolicyPages(request.target.policy_urls);
+  }
+
+  const nimbleBodies = nimblePages
+    .map((p) => p.body)
+    .filter((b) => b.length > 0 && !b.startsWith("[nimble"));
+  const nimbleQuote = nimbleBodies[0]?.slice(0, 500);
+
+  let chunks: PolicyChunk[] = [];
+  let pipelineMode: PipelineMeta["mode"] = "rules_only";
+
   if (!options.skipSenso && request.target.policy_content_id) {
     try {
       chunks = await searchPolicy(
         actionDescription,
         request.target.policy_content_id
       );
+      pipelineMode = "senso_kb";
     } catch (e) {
       console.warn("[pipeline] Senso search failed, using rule heuristics only", e);
     }
+  } else if (nimbleBodies.length > 0) {
+    chunks = [
+      {
+        content_id: "nimble-live",
+        chunk_text: nimbleBodies.join("\n\n").slice(0, 12_000),
+        score: 1,
+        title: request.target.name,
+      },
+    ];
+    pipelineMode = "nimble_live";
   }
 
   let verdict: Verdict;
@@ -62,7 +109,11 @@ export async function runEvaluatePipeline(
         inferRulesFromRequest(request)
       ),
     });
-    verdict = heuristicVerdict(request, engine, chunks[0]?.chunk_text);
+    verdict = heuristicVerdict(
+      request,
+      engine,
+      chunks[0]?.chunk_text ?? nimbleQuote
+    );
   } else {
     const engineFromRequest = evaluateRules({
       request,
@@ -96,7 +147,7 @@ export async function runEvaluatePipeline(
       verdict = heuristicVerdict(
         request,
         engineFromRequest,
-        chunks[0]?.chunk_text
+        chunks[0]?.chunk_text ?? nimbleQuote
       );
     }
   }
@@ -107,10 +158,38 @@ export async function runEvaluatePipeline(
     policy_version: {
       provider: request.target.name,
       checked_at: new Date().toISOString(),
+      content_hash:
+        nimbleBodies.length > 0
+          ? hashPolicyContent(nimbleBodies)
+          : undefined,
+    },
+    citation: {
+      ...verdict.citation,
+      source_url:
+        verdict.citation.source_url ||
+        request.target.policy_urls[0] ||
+        `https://${request.target.domain ?? "unknown"}`,
+      quoted_text:
+        verdict.citation.quoted_text?.length > 30
+          ? verdict.citation.quoted_text
+          : (chunks[0]?.chunk_text?.slice(0, 400) ??
+            nimbleQuote ??
+            verdict.citation.quoted_text),
     },
   };
 
-  return finalizeVerdict(request, withMeta, options);
+  const finalized = await finalizeVerdict(request, withMeta, options);
+  return {
+    verdict: finalized,
+    meta: {
+      mode: pipelineMode,
+      demo_mode: demoMode,
+      nimble_pages_fetched: nimblePages.filter((p) =>
+        p.body && !p.body.startsWith("[nimble")
+      ).length,
+      senso_chunks: chunks.length,
+    },
+  };
 }
 
 async function finalizeVerdict(
@@ -144,8 +223,15 @@ async function finalizeVerdict(
 function inferRulesFromRequest(request: EvaluateRequest): string[] {
   const rules: string[] = [];
   const a = request.intended_action;
-  if (request.target.domain === "linkedin.com" && a.uses_automation) {
+  const domain = request.target.domain ?? "";
+  if (
+    (domain.includes("linkedin.com") || domain.includes("instagram.com")) &&
+    a.uses_automation
+  ) {
     rules.push("no bots", "no automated access");
+  }
+  if (domain.includes("instagram.com") && a.stores_data) {
+    rules.push("no_bulk_automated_collection", "personal data consent");
   }
   if (a.frequency === "bulk") rules.push("bulk automated collection");
   if (a.action_type === "scrape_listing_aggregator") {

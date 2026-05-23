@@ -94,7 +94,7 @@ export async function runResearchOrchestrator(
   const verdicts: Verdict[] = [];
 
   for (const step of steps) {
-    const verdict = await runEvaluatePipeline(step.evaluate, {
+    const { verdict } = await runEvaluatePipeline(step.evaluate, {
       demoKey: step.demoKey,
     });
     verdicts.push(verdict);
