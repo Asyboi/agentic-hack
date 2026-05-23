@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "demo": "tsx scripts/demo-three-actions.ts",
+    "agent": "tsx --env-file-if-exists=.env scripts/agent-demo.ts",
     "test:senso": "tsx scripts/test-senso.ts",
     "test:senso:live": "tsx scripts/test-live-senso.ts",
     "test:nimble": "tsx scripts/test-nimble.ts",
@@ -26,6 +27,7 @@
     "next": "^15.3.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "x402-fetch": "^1.2.0",
     "x402-next": "^1.2.0",
     "zod": "^3.25.28"
   },
