@@ -1,0 +1,14 @@
+#!/bin/sh
+# Strip Cursor co-author trailers (IDE/Agent attribution). Enable with:
+#   git config core.hooksPath .githooks
+MSG_FILE="$1"
+[ -f "$MSG_FILE" ] || exit 0
+if [ "$(uname -s)" = "Darwin" ]; then
+  sed -i '' '/[Cc]o-[Aa]uthored-[Bb]y:.*[Cc]ursor/d' "$MSG_FILE"
+  sed -i '' '/cursoragent@cursor\.com/d' "$MSG_FILE"
+  sed -i '' '/Made-with: Cursor/d' "$MSG_FILE"
+else
+  sed -i '/[Cc]o-[Aa]uthored-[Bb]y:.*[Cc]ursor/d' "$MSG_FILE"
+  sed -i '/cursoragent@cursor\.com/d' "$MSG_FILE"
+  sed -i '/Made-with: Cursor/d' "$MSG_FILE"
+fi
