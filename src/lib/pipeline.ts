@@ -13,6 +13,7 @@ export type PipelineMeta = {
   mode: "demo_fixture" | "senso_kb" | "nimble_live" | "rules_only";
   demo_mode: boolean;
   nimble_pages_fetched: number;
+  nimble_errors: string[];
   senso_chunks: number;
 };
 
@@ -56,6 +57,7 @@ export async function runEvaluatePipeline(
         mode: "demo_fixture",
         demo_mode: true,
         nimble_pages_fetched: 0,
+        nimble_errors: [],
         senso_chunks: 0,
       },
     };
@@ -70,6 +72,9 @@ export async function runEvaluatePipeline(
     nimblePages = await fetchPolicyPages(request.target.policy_urls);
   }
 
+  const nimbleErrors = nimblePages
+    .filter((p) => p.body.startsWith("[nimble"))
+    .map((p) => `${p.url}: ${p.body.replace(/^\[nimble [^\]]+\]\s*/, "")}`);
   const nimbleBodies = nimblePages
     .map((p) => p.body)
     .filter((b) => b.length > 0 && !b.startsWith("[nimble"));
@@ -187,6 +192,7 @@ export async function runEvaluatePipeline(
       nimble_pages_fetched: nimblePages.filter((p) =>
         p.body && !p.body.startsWith("[nimble")
       ).length,
+      nimble_errors: nimbleErrors,
       senso_chunks: chunks.length,
     },
   };

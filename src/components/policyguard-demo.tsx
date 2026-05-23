@@ -386,16 +386,24 @@ export function PolicyGuardDemo() {
         {!loading && !error && verdict && (
           <div className={styles.panelBody}>
             {pipelineMeta && (
-              <p className={styles.pipelineTag}>
-                Pipeline: {pipelineMeta.mode}
-                {pipelineMeta.demo_mode ? " · DEMO FIXTURES ON" : ""}
-                {pipelineMeta.nimble_pages_fetched > 0
-                  ? ` · nimble pages: ${pipelineMeta.nimble_pages_fetched}`
-                  : ""}
-                {pipelineMeta.senso_chunks > 0
-                  ? ` · senso chunks: ${pipelineMeta.senso_chunks}`
-                  : ""}
-              </p>
+              <>
+                <p className={styles.pipelineTag}>
+                  Pipeline: {pipelineMeta.mode}
+                  {pipelineMeta.demo_mode ? " · DEMO FIXTURES ON" : ""}
+                  {pipelineMeta.nimble_pages_fetched > 0
+                    ? ` · nimble pages: ${pipelineMeta.nimble_pages_fetched}`
+                    : ""}
+                  {pipelineMeta.senso_chunks > 0
+                    ? ` · senso chunks: ${pipelineMeta.senso_chunks}`
+                    : ""}
+                </p>
+                {pipelineMeta.nimble_errors?.length > 0 && (
+                  <p className={styles.pipelineTag} style={{ color: "#c0392b" }}>
+                    nimble failed:{" "}
+                    {pipelineMeta.nimble_errors.join(" | ")}
+                  </p>
+                )}
+              </>
             )}
             <div className={styles.verdictRow}>
               <span
