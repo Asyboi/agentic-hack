@@ -18,7 +18,11 @@ const PM_TASK =
 async function main() {
   console.log("PolicyGuard research demo\n");
   console.log("Task:", PM_TASK, "\n");
+  console.log(
+    "Calling POST /api/research (live mode can take 2–5 min for 8 steps — watch `npm run dev` logs for [research] step N/8)\n"
+  );
 
+  const started = Date.now();
   const res = await fetch(`${BASE}/api/research`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -30,6 +34,7 @@ async function main() {
   });
 
   const json = await res.json();
+  console.log(`Request finished in ${((Date.now() - started) / 1000).toFixed(1)}s\n`);
   if (!res.ok) {
     console.error("FAILED", res.status, json);
     process.exit(1);
@@ -40,6 +45,8 @@ async function main() {
   console.log("\n=== STATS ===");
   console.log({
     research_id: json.research_id,
+    planner_mode: json.planner_mode,
+    planner_fallback: json.planner_fallback,
     sources_checked: json.sources_checked,
     sources_usable: json.sources_usable,
     sources_blocked: json.sources_blocked,

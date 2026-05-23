@@ -13,6 +13,9 @@
     "test:nimble": "tsx scripts/test-nimble.ts",
     "nimble:sample": "tsx scripts/save-nimble-sample.ts",
     "demo:research": "tsx scripts/demo-research.ts",
+    "kb:ingest": "tsx scripts/ingest-kb-from-nimble.ts",
+    "kb:list": "tsx scripts/ingest-kb-from-nimble.ts -- --list",
+    "test:planner": "tsx scripts/test-planner.ts",
     "clickhouse:init": "tsx scripts/init-clickhouse.ts",
     "typecheck": "tsc --noEmit"
   },

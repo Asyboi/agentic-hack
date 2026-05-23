@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "generated_at": "2026-05-23T00:00:00.000Z",
+  "senso_folder_node_id": "125d0670-85ea-4f90-8b0f-a1fcad8eba1f",
+  "policies": {
+    "linkedin": {
+      "content_id": "a06ff6b1-a867-4b5f-bc33-aa0be186b6a4",
+      "domain": "linkedin.com",
+      "title": "LinkedIn policy — linkedin.com (Nimble)",
+      "policy_urls": ["https://www.linkedin.com/legal/user-agreement"],
+      "updated_at": "2026-05-23T00:00:00.000Z"
+    },
+    "notion_so": {
+      "content_id": "REPLACE_AFTER_npm_run_kb_ingest",
+      "domain": "notion.so",
+      "title": "Notion policy — notion.so (Nimble)",
+      "policy_urls": [
+        "https://www.notion.so/terms",
+        "https://www.notion.so/robots.txt"
+      ],
+      "updated_at": "2026-05-23T00:00:00.000Z"
+    }
+  }
+}

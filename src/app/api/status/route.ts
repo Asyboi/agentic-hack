@@ -6,5 +6,9 @@ export async function GET() {
     senso_configured: Boolean(process.env.SENSO_API_KEY?.trim()),
     nimble_configured: Boolean(process.env.NIMBLE_API_KEY?.trim()),
     anthropic_configured: Boolean(process.env.ANTHROPIC_API_KEY?.trim()),
+    planner:
+      process.env.POLICYGUARD_PLANNER?.trim().toLowerCase() === "llm"
+        ? "llm"
+        : "fixed",
   });
 }

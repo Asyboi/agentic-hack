@@ -88,20 +88,40 @@ export async function runResearchOrchestrator(
   input: ResearchRequest
 ): Promise<ResearchResult> {
   const research_id = `res_${randomUUID().slice(0, 8)}`;
-  const { steps, vendors } = planResearchSteps(input);
+  const plan = await planResearchSteps(input);
+  const { steps, vendors, planner_mode, planner_fallback } = plan;
+
+  console.info(
+    `[research] planner=${planner_mode}${planner_fallback ? " (fallback)" : ""} → ${steps.length} steps, ${vendors.length} vendors`
+  );
 
   const evaluations: ResearchResult["evaluations"] = [];
   const verdicts: Verdict[] = [];
 
-  for (const step of steps) {
-    const { verdict } = await runEvaluatePipeline(step.evaluate, {
-      demoKey: step.demoKey,
+  const demoMode = process.env.POLICYGUARD_DEMO_MODE === "true";
+  const skipLlm = !process.env.ANTHROPIC_API_KEY?.trim();
+  const skipPublish =
+    process.env.POLICYGUARD_RESEARCH_SKIP_PUBLISH !== "false";
+
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i];
+    console.info(
+      `[research] step ${i + 1}/${steps.length}: ${step.label} (live=${!demoMode})`
+    );
+    const { verdict, meta } = await runEvaluatePipeline(step.evaluate, {
+      demoKey: demoMode ? step.demoKey : undefined,
+      skipPublish,
+      skipLlm,
     });
+    console.info(
+      `[research]   → ${verdict.decision} | pipeline=${meta.mode} | nimble=${meta.nimble_pages_fetched} | senso_chunks=${meta.senso_chunks}`
+    );
     verdicts.push(verdict);
     evaluations.push({
       label: step.label,
       request: step.evaluate,
       verdict,
+      pipeline_meta: meta,
     });
     await logDecision(step.evaluate, verdict);
   }
@@ -129,8 +149,10 @@ export async function runResearchOrchestrator(
   return {
     research_id,
     task: input.task,
+    planner_mode,
+    planner_fallback,
     status: collectedCount > 0 ? "completed" : "partial",
-    summary: `Checked ${steps.length} planned actions across ${vendors.length} vendor domains. Collected pricing for ${collectedCount} vendors. Blocked risky steps (LinkedIn: ${linkedinBlocked ? "yes" : "no"}, aggregator: ${aggregatorBlocked ? "yes" : "no"}). CRM import requires human review.`,
+    summary: `Checked ${steps.length} planned actions (${planner_mode} planner${planner_fallback ? ", fixed fallback" : ""}) across ${vendors.length} vendor domains. Collected pricing for ${collectedCount} vendors. Blocked risky steps (LinkedIn: ${linkedinBlocked ? "yes" : "no"}, aggregator: ${aggregatorBlocked ? "yes" : "no"}). CRM import requires human review.`,
     sources_discovered: steps.length,
     sources_checked: steps.length,
     sources_usable: counts.usable,

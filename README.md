@@ -91,6 +91,26 @@ npm run test:senso
 
 Optional env for per-scenario publish: `SENSO_GEO_PROMPT_LINKEDIN`, `SENSO_GEO_PROMPT_PRICING`, `SENSO_GEO_PROMPT_EMAIL` (from `senso prompts list`). Set `POLICYGUARD_SKIP_PUBLISH=true` to skip publish during dev.
 
+**Build the KB from Nimble (terms + robots per domain):**
+
+```bash
+# needs NIMBLE_API_KEY + SENSO_API_KEY — ~3 min for 8 domains
+npm run kb:ingest
+npm run kb:ingest -- --only notion_so,linkedin   # subset
+npm run kb:list                                  # target keys
+```
+
+Writes `policy-content-ids.json` (gitignored). Restart `npm run dev` so `/api/research` scopes Senso search to **per-vendor** Nimble-ingested docs instead of the legacy OpenAI fixture id.
+
+**LLM planner (flexible steps from task text):**
+
+```bash
+# .env.local: POLICYGUARD_PLANNER=llm  +  ANTHROPIC_API_KEY=sk-ant-...
+npm run demo:research
+```
+
+Claude proposes action steps (G2, LinkedIn, vendor pricing, CRM, etc.) from the natural-language task; falls back to the fixed 8-step plan on error. Response includes `planner_mode` and `planner_fallback`.
+
 ---
 
 ### Nimble: live policy and pricing fetch

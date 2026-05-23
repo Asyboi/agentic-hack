@@ -33,6 +33,8 @@ export const sourcePolicyEntrySchema = z.object({
 export const researchResultSchema = z.object({
   research_id: z.string(),
   task: z.string(),
+  planner_mode: z.enum(["fixed", "llm"]).optional(),
+  planner_fallback: z.boolean().optional(),
   status: z.enum(["completed", "partial"]),
   summary: z.string(),
   sources_discovered: z.number(),
@@ -46,6 +48,15 @@ export const researchResultSchema = z.object({
       label: z.string(),
       request: evaluateRequestSchema,
       verdict: verdictSchema,
+      pipeline_meta: z
+        .object({
+          mode: z.string(),
+          demo_mode: z.boolean(),
+          nimble_pages_fetched: z.number(),
+          nimble_errors: z.array(z.string()).optional(),
+          senso_chunks: z.number(),
+        })
+        .optional(),
     })
   ),
   source_policy_map: z.array(sourcePolicyEntrySchema),

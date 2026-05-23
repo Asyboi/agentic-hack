@@ -6,7 +6,8 @@ import {
 } from "@/lib/schemas/research";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+/** Live research runs 8 sequential Nimble+Senso steps; allow several minutes locally. */
+export const maxDuration = 300;
 
 /**
  * POST /api/research

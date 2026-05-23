@@ -156,22 +156,35 @@ If chunks come back with `score >= 0.4`, you're in good shape for grounding the 
 
 ---
 
-## If Nimble fetches a new policy at runtime
+## Nimble → Senso KB (batch ingest)
 
-The "real-time" part of the demo says Nimble fetches policies live. If you want each request to fetch + ingest a fresh policy (instead of using the pre-loaded 3):
+PolicyGuard can populate the `policies-under-evaluation` folder from Nimble in one shot:
 
 ```bash
-# After Nimble returns the policy text:
+npm run kb:ingest
+```
+
+This fetches each domain’s terms/robots via Nimble, writes raw markdown into Senso (`kb create-raw` or `kb update-raw` on existing nodes), waits for embedding, and saves `policy-content-ids.json` for the planner.
+
+Folder id (Policy Guard org): `125d0670-85ea-4f90-8b0f-a1fcad8eba1f` — override with `SENSO_POLICIES_FOLDER_NODE_ID` in `.env.local`.
+
+**Note:** Updates to pre-loaded docs use `kb update-raw <kb_node_id>` (not `patch-raw` on `content_id`).
+
+## If Nimble fetches a new policy at runtime (manual)
+
+For one-off ingests without the script, after Nimble returns text:
+
+```bash
 senso kb create-raw --data "{
   \"title\": \"Live fetch: <site> policy @ <timestamp>\",
   \"text\": \"<nimble-fetched text>\",
-  \"kb_folder_node_id\": \"$(cat /tmp/policies-folder-id.txt)\"
+  \"kb_folder_node_id\": \"125d0670-85ea-4f90-8b0f-a1fcad8eba1f\"
 }" --output json --quiet
 ```
 
 Save the returned `content_id` and use it in the subsequent `search context` call.
 
-**Trade-off:** Live ingest adds 5-15s of processing time per request (Senso has to chunk + embed). For the demo, pre-loading the 3 policies and showing one live Nimble fetch (for narrative) is probably the right balance.
+**Trade-off:** Live ingest per request adds 5–20s. Prefer `npm run kb:ingest` before demos; keep runtime Nimble fetch in the evaluate pipeline for fresh citations.
 
 ---
 
