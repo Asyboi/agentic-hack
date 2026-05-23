@@ -12,6 +12,7 @@ function originFromRequest(req: Request): string {
 
 export async function GET(req: Request) {
   const baseUrl = originFromRequest(req);
+  const userPrompt = new URL(req.url).searchParams.get("prompt") ?? "";
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -30,7 +31,7 @@ export async function GET(req: Request) {
       });
 
       try {
-        await runAgent(baseUrl, send);
+        await runAgent(baseUrl, send, userPrompt || undefined);
       } catch (e) {
         send({
           type: "error",
