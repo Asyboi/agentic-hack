@@ -1,9 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-/** Load `.env.local` for tsx scripts (Next.js loads this automatically for `npm run dev`). */
-export function loadEnvLocal(): void {
-  const path = join(process.cwd(), ".env.local");
+/** Later lines in the same file override earlier ones (fixes duplicate empty NIMBLE_API_KEY=). */
+function loadEnvFile(filename: string): void {
+  const path = join(process.cwd(), filename);
   if (!existsSync(path)) return;
 
   for (const line of readFileSync(path, "utf8").split("\n")) {
@@ -19,8 +19,12 @@ export function loadEnvLocal(): void {
     ) {
       value = value.slice(1, -1);
     }
-    if (!(key in process.env)) {
-      process.env[key] = value;
-    }
+    process.env[key] = value;
   }
+}
+
+/** Load `.env` then `.env.local` for tsx scripts (Next.js loads these for `npm run dev`). */
+export function loadEnvLocal(): void {
+  loadEnvFile(".env");
+  loadEnvFile(".env.local");
 }

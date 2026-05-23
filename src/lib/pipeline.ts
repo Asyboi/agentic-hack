@@ -76,8 +76,8 @@ export async function runEvaluatePipeline(
     .filter((p) => p.body.startsWith("[nimble"))
     .map((p) => `${p.url}: ${p.body.replace(/^\[nimble [^\]]+\]\s*/, "")}`);
   const nimbleBodies = nimblePages
-    .map((p) => p.body)
-    .filter((b) => b.length > 0 && !b.startsWith("[nimble"));
+    .map((p) => stripHtmlNoise(p.body))
+    .filter((b) => b.length > 80 && !b.startsWith("[nimble"));
   const nimbleQuote = nimbleBodies[0]?.slice(0, 500);
 
   let chunks: PolicyChunk[] = [];
@@ -274,3 +274,25 @@ function heuristicVerdict(
     },
   };
 }
+
+function stripHtmlNoise(body: string): string {
+  if (!body) return body;
+  let s = body;
+  // Drop script/style blocks entirely
+  s = s.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ");
+  s = s.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ");
+  // Drop all remaining tags
+  s = s.replace(/<[^>]+>/g, " ");
+  // Decode a few common entities
+  s = s
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&#x?[0-9a-f]+;/gi, "");
+  // Collapse whitespace
+  s = s.replace(/\s+/g, " ").trim();
+  return s;
+}
+

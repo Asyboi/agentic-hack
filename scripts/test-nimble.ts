@@ -1,17 +1,30 @@
 /**
- * Smoke-test Nimble Extract with NIMBLE_API_KEY from .env.local
+ * Smoke-test Nimble search + extract (organizer API guide).
  * Run: npm run test:nimble
  *      npm run test:nimble -- https://www.linkedin.com/legal/user-agreement
  */
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { loadEnvLocal } from "./load-env-local";
-import { fetchPolicyPage } from "../src/lib/nimble";
+import { fetchPolicyPage, searchWeb } from "../src/lib/nimble";
 
 loadEnvLocal();
 
 async function main() {
-  if (!process.env.NIMBLE_API_KEY?.trim()) {
+  const key = process.env.NIMBLE_API_KEY?.trim();
+  if (!key) {
+    const envPath = join(process.cwd(), ".env");
+    console.error("Missing NIMBLE_API_KEY after loading .env files.\n");
+    console.error(`  cwd:      ${process.cwd()}`);
+    console.error(`  .env:     ${existsSync(envPath) ? envPath : "(not found)"}`);
     console.error(
-      "Missing NIMBLE_API_KEY. Add it to .env.local (see .env.example)"
+      `  .env.local: ${existsSync(join(process.cwd(), ".env.local")) ? "present" : "(not found)"}`
+    );
+    console.error(
+      "\nFix: open .env in this repo, set NIMBLE_API_KEY=your_key on ONE line, save (Cmd+S), rerun."
+    );
+    console.error(
+      "If the key is only in the editor tab but not saved, the terminal will still see an empty value."
     );
     process.exit(1);
   }
@@ -19,7 +32,13 @@ async function main() {
   const url =
     process.argv[2] ?? "https://www.linkedin.com/legal/user-agreement";
 
-  console.log(`Fetching policy page via Nimble: ${url}\n`);
+  console.log("Nimble search: linkedin terms of service bots\n");
+  const results = await searchWeb("linkedin terms of service automated bots", 3);
+  for (const r of results) {
+    console.log(`- ${r.title}\n  ${r.url}\n  ${r.snippet?.slice(0, 120)}…\n`);
+  }
+
+  console.log(`\nNimble extract: ${url}\n`);
 
   const page = await fetchPolicyPage(url);
   console.log(`status: ${page.status_code ?? "?"}`);
