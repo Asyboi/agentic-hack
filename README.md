@@ -48,15 +48,12 @@ Returns verdict JSON to calling agent
 
 ## Team
 
-- **Candy** — Senso integration
-- **Kyle** — Nimble integration
-- **Aarya** — Agent framework / verdict generation
-- **Aslan** — x402 monetization + repo owner
+- **Candy** — 
+- **Kyle** —
+- **Aarya** —
+- **Aslan** —
 
 ## Project plans
 
 See [plans/HANDOFF.md](plans/HANDOFF.md) for the full team handoff doc: verdict schema, 3-action demo flow, Senso integration spec, demo pitch, and acceptance criteria.
 
-## Status
-
-Prototype, built in ~5 hours on May 23, 2026. Not production. No users. No revenue. The status is: hackathon project.
