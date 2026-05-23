@@ -1,5 +1,6 @@
 import type { EvaluateRequest } from "@/lib/schemas/evaluate-request";
 import type { Verdict } from "@/lib/schemas/verdict";
+import { CRM_POLICIES } from "./crm-fixtures";
 
 /**
  * Optional GEO prompt IDs for cited.md publish (`senso prompts list`).
@@ -12,11 +13,12 @@ export const DEMO_GEO_PROMPT_ENV_KEYS = {
 } as const;
 
 /** Pre-loaded Senso content IDs — plans/SENSO_INTEGRATION.md */
-export const DEMO_POLICIES = {
+export const DEMO_POLICIES: Record<string, string> = {
   linkedin: "a06ff6b1-a867-4b5f-bc33-aa0be186b6a4",
   openai: "f46f5b14-6286-407f-b09a-abf53a4c53b7",
   stripe_privacy: "43800835-3fce-44e6-b860-c406805b23a8",
-} as const;
+  ...CRM_POLICIES,
+};
 
 /** Three demo scenarios for the 3-minute pitch */
 export const DEMO_REQUESTS: Record<string, EvaluateRequest> = {

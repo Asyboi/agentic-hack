@@ -8,3 +8,5 @@ tsconfig.tsbuildinfo
 .vercel
 .gstack/
 certificates/
+scripts/cache/
+scripts/policy-ids.json

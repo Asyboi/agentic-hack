@@ -10,7 +10,10 @@
     "demo:research": "tsx scripts/demo-research.ts",
     "test:senso": "tsx scripts/test-senso.ts",
     "clickhouse:init": "tsx scripts/init-clickhouse.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prewarm": "tsx scripts/prewarm-policies.ts",
+    "prewarm:force": "tsx scripts/prewarm-policies.ts --force",
+    "prewarm:dry": "tsx scripts/prewarm-policies.ts --dry-run"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
