@@ -1,8 +1,10 @@
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { evaluateRequestSchema } from "@/lib/schemas/evaluate-request";
 import { verdictSchema } from "@/lib/schemas/verdict";
 import { logDecision } from "@/lib/clickhouse";
 import { runEvaluatePipeline } from "@/lib/pipeline";
+import { withPaywall } from "@/lib/with-paywall";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -10,9 +12,10 @@ export const maxDuration = 60;
 /**
  * POST /api/evaluate
  * PolicyGuard runtime decision API.
- * x402 paywall: Aslan wraps this route or upstream gateway.
+ * Paywall via `withPaywall`: settlement happens only when the handler
+ * responds successfully (status < 400).
  */
-export async function POST(req: Request) {
+async function postEvaluate(req: NextRequest) {
   let body: unknown;
   try {
     body = await req.json();
@@ -32,7 +35,11 @@ export async function POST(req: Request) {
 
   try {
     const { verdict, meta } = await runEvaluatePipeline(parsed.data, {
-      demoKey: demoKey as "linkedin_scrape" | "pricing_read" | "email_crm" | undefined,
+      demoKey: demoKey as
+        | "linkedin_scrape"
+        | "pricing_read"
+        | "email_crm"
+        | undefined,
     });
 
     const validated = verdictSchema.parse(verdict);
@@ -47,6 +54,11 @@ export async function POST(req: Request) {
     );
   }
 }
+
+export const POST = withPaywall(postEvaluate, {
+  description: "PolicyGuard compliance verdict API",
+  maxTimeoutSeconds: 60,
+});
 
 export async function GET() {
   return NextResponse.json({

@@ -1,9 +1,11 @@
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { runResearchOrchestrator } from "@/lib/research-orchestrator";
 import {
   researchRequestSchema,
   researchResultSchema,
 } from "@/lib/schemas/research";
+import { withPaywall } from "@/lib/with-paywall";
 
 export const runtime = "nodejs";
 /** Live research runs 8 sequential Nimble+Senso steps; allow several minutes locally. */
@@ -12,8 +14,10 @@ export const maxDuration = 300;
 /**
  * POST /api/research
  * Marketplace-style task in → plan actions → policy-check each → vendor packet out.
+ * Paywall via `withPaywall`: settlement happens only when the handler
+ * responds successfully (status < 400).
  */
-export async function POST(req: Request) {
+async function postResearch(req: NextRequest) {
   let body: unknown;
   try {
     body = await req.json();
@@ -41,6 +45,11 @@ export async function POST(req: Request) {
     );
   }
 }
+
+export const POST = withPaywall(postResearch, {
+  description: "PolicyGuard marketplace research API",
+  maxTimeoutSeconds: 120,
+});
 
 export async function GET() {
   return NextResponse.json({
