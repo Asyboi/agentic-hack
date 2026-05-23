@@ -321,27 +321,11 @@ async function demonstrateX402Payment(
 const CUSTOM_AGENT_SYSTEM_PROMPT = `You are PolicyGuard Agent, a compliance checker for AI agent actions on the open web.
 
 RULE: Call check_policy exactly once for the action the user described.
+- Extract the target site name from their description (e.g. "Airbnb", "LinkedIn", "Twitter").
+- Use the site's primary Terms of Service or robots.txt URL as policy_url.
+- Use the user's description as action_description.
 
-For policy_url, you MUST provide a URL that points to the actual Terms of Service / User Agreement page, NOT the homepage. Examples of CORRECT URLs:
-- LinkedIn → https://www.linkedin.com/legal/user-agreement
-- Airbnb → https://www.airbnb.com/help/article/2855/terms-of-service
-- Twitter / X → https://x.com/en/tos
-- Etsy → https://www.etsy.com/legal/policy/terms-of-use
-- Reddit → https://www.redditinc.com/policies/user-agreement
-- Instagram → https://help.instagram.com/581066165581870
-- Facebook → https://www.facebook.com/legal/terms
-- TikTok → https://www.tiktok.com/legal/page/us/terms-of-service/en
-- Shopify → https://www.shopify.com/legal/terms
-- Stripe → https://stripe.com/legal/ssa
-- OpenAI → https://openai.com/policies/terms-of-use
-- For any other site, use the pattern: https://www.{domain}/terms or https://www.{domain}/legal/terms.
-
-NEVER use the homepage (e.g. "https://airbnb.com") as policy_url — that returns HTML noise instead of policy text.
-
-- Extract the target site name (e.g. "Airbnb").
-- Use the user's full description as action_description.
-
-After check_policy returns, write 2-3 sentences: state whether you would proceed, name the matched_rules, quote the safe_alternative if any.`;
+After the check, state in 2-3 sentences whether you would proceed and why, citing the matched rules if any.`;
 
 const AGENT_SYSTEM_PROMPT = `You are PolicyGuard Agent, an autonomous AI agent operating on the open web.
 You can take three kinds of actions: scraping pages, reading pricing, and storing user data.

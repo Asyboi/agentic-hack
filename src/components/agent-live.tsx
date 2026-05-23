@@ -72,7 +72,6 @@ export function AgentLive() {
   const [events, setEvents] = useState<AgentEvent[]>([]);
   const [running, setRunning] = useState(false);
   const [prompt, setPrompt] = useState("");
-  const [connError, setConnError] = useState<string | null>(null);
   const sourceRef = useRef<EventSource | null>(null);
   const feedRef = useRef<HTMLDivElement | null>(null);
 
@@ -91,26 +90,20 @@ export function AgentLive() {
   const start = useCallback(() => {
     sourceRef.current?.close();
     setEvents([]);
-    setConnError(null);
     setRunning(true);
 
     const url = prompt.trim()
       ? `/api/agent-run?prompt=${encodeURIComponent(prompt.trim())}`
       : "/api/agent-run";
-    let opened = false;
     const es = new EventSource(url);
     sourceRef.current = es;
-
-    es.onopen = () => {
-      opened = true;
-    };
 
     es.onmessage = (msg) => {
       try {
         const event = JSON.parse(msg.data) as AgentEvent;
         setEvents((prev) => [...prev, event]);
-      } catch (e) {
-        console.error("[agent-live] parse failed", e, msg.data);
+      } catch {
+        /* ignore malformed */
       }
     };
 
@@ -119,16 +112,7 @@ export function AgentLive() {
       es.close();
     });
 
-    es.onerror = (e) => {
-      console.error("[agent-live] EventSource error", e, {
-        readyState: es.readyState,
-        opened,
-      });
-      setConnError(
-        opened
-          ? "Stream interrupted. Check the dev server log."
-          : "Could not connect to /api/agent-run. Is `npm run dev` running on port 3000?"
-      );
+    es.onerror = () => {
       setRunning(false);
       es.close();
     };
@@ -205,29 +189,12 @@ export function AgentLive() {
       </div>
 
       <div className={styles.feed} ref={feedRef} aria-live="polite">
-        {events.length === 0 && !running && !connError && (
+        {events.length === 0 && !running && (
           <div className={styles.empty}>
             Click <span className={styles.kbd}>Run agent</span> to start.
             <br />
             Events stream live: agent reasoning, tool calls, x402 settlement,
             and grounded verdicts.
-          </div>
-        )}
-
-        {connError && (
-          <div className={styles.row}>
-            <span className={`${styles.label} ${styles.labelError}`}>error</span>
-            <div className={styles.body}>
-              <div className={styles.errorBox}>{connError}</div>
-            </div>
-          </div>
-        )}
-
-        {running && events.length === 0 && (
-          <div className={styles.empty}>
-            <span className={styles.kbd}>connecting…</span>
-            <br />
-            First event arrives in ~1s. Full run takes 25–40s.
           </div>
         )}
 
