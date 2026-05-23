@@ -3,10 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start",
     "demo": "tsx scripts/demo-three-actions.ts",
+    "test:senso": "tsx scripts/test-live-senso.ts",
+    "test:nimble": "tsx scripts/test-nimble.ts",
     "demo:research": "tsx scripts/demo-research.ts",
     "test:senso": "tsx scripts/test-senso.ts",
     "clickhouse:init": "tsx scripts/init-clickhouse.ts",

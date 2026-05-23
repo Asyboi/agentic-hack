@@ -31,14 +31,14 @@ export async function POST(req: Request) {
   const demoKey = req.headers.get("x-demo-scenario") ?? undefined;
 
   try {
-    const verdict = await runEvaluatePipeline(parsed.data, {
+    const { verdict, meta } = await runEvaluatePipeline(parsed.data, {
       demoKey: demoKey as "linkedin_scrape" | "pricing_read" | "email_crm" | undefined,
     });
 
     const validated = verdictSchema.parse(verdict);
     await logDecision(parsed.data, validated);
 
-    return NextResponse.json(validated);
+    return NextResponse.json({ ...validated, pipeline: meta });
   } catch (e) {
     console.error("[evaluate]", e);
     return NextResponse.json(
