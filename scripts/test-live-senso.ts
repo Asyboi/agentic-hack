@@ -1,9 +1,12 @@
 /**
  * Live Senso path (no fixture shortcuts).
- * Run: npm run test:senso
+ * Run: npm run test:senso:live
  */
+import { loadEnvLocal } from "./load-env-local";
 import { DEMO_REQUESTS } from "../src/lib/demo-fixtures";
 import { runEvaluatePipeline } from "../src/lib/pipeline";
+
+loadEnvLocal();
 
 const SCENARIOS = [
   { key: "linkedin_scrape" as const, expect: "blocked" },
