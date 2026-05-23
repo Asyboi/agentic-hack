@@ -189,6 +189,16 @@ npm run demo:research
 
 Claude proposes action steps (G2, LinkedIn, vendor pricing, CRM, etc.) from the natural-language task; falls back to the fixed 8-step plan on error. Response includes `planner_mode` and `planner_fallback`.
 
+**Live vendor collection (after LLM planner):**
+
+```bash
+# default on — Nimble fetches /pricing when policy allows read_pricing_page
+POLICYGUARD_COLLECT_PRICING=true
+POLICYGUARD_COLLECT_LLM=true   # Claude extracts $/user + trial URL if regex misses
+```
+
+Vendor rows include `collection_source`: `nimble_heuristic`, `nimble_llm`, or `catalog_fallback`.
+
 ---
 
 ## Tech Stack

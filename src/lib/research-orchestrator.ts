@@ -5,6 +5,11 @@ import { runEvaluatePipeline } from "@/lib/pipeline";
 import type { ResearchRequest, ResearchResult } from "@/lib/schemas/research";
 import type { Verdict } from "@/lib/schemas/verdict";
 import type { VendorCatalogEntry } from "@/lib/research-fixtures";
+import { mapPool, researchConcurrency } from "@/lib/map-pool";
+import {
+  collectVendorPricing,
+  isVendorCollectionEnabled,
+} from "@/lib/vendor-collect";
 
 function countByDecision(verdicts: Verdict[]) {
   return {
@@ -48,37 +53,84 @@ function buildSourcePolicyMap(
   });
 }
 
-function buildVendors(
+async function buildVendors(
   vendors: VendorCatalogEntry[],
   steps: PlannedStep[],
-  verdicts: Verdict[]
-): ResearchResult["vendors"] {
-  const results: ResearchResult["vendors"] = [];
+  verdicts: Verdict[],
+  task: string
+): Promise<ResearchResult["vendors"]> {
+  type Row = ResearchResult["vendors"][number] & { _domain: string };
 
-  for (const v of vendors) {
-    const idx = steps.findIndex(
-      (s) => s.kind === "vendor" && s.evaluate.target.domain === v.domain
-    );
-    if (idx === -1) continue;
-    const verdict = verdicts[idx];
-    const allowed =
-      verdict.decision === "allowed" && verdict.machine_instruction.proceed;
+  const rows: Row[] = vendors
+    .map((v) => {
+      const idx = steps.findIndex(
+        (s) => s.kind === "vendor" && s.evaluate.target.domain === v.domain
+      );
+      if (idx === -1) return null;
+      const verdict = verdicts[idx];
+      const allowed =
+        verdict.decision === "allowed" && verdict.machine_instruction.proceed;
+      return {
+        _domain: v.domain,
+        vendor: v,
+        step: steps[idx],
+        verdict,
+        allowed,
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
 
-    results.push({
-      name: v.name,
-      price_per_user: v.price_per_user,
-      trial_url: v.trial_url,
-      pricing_url: v.pricing_url,
-      why_startup: v.why_startup,
-      policy_status: verdict.decision,
-      collected: allowed,
-      source_evidence: allowed
-        ? `Collected from ${v.pricing_url} after policy check ${verdict.decision_id}`
-        : undefined,
-    });
-  }
+  const blocked: Row[] = rows
+    .filter((r) => !r.allowed)
+    .map((r) => ({
+      _domain: r._domain,
+      name: r.vendor.name,
+      price_per_user: r.vendor.price_per_user,
+      trial_url: r.vendor.trial_url,
+      pricing_url: r.vendor.pricing_url,
+      why_startup: r.vendor.why_startup,
+      policy_status: r.verdict.decision,
+      collected: false,
+    }));
 
-  return results;
+  const toCollect = rows.filter((r) => r.allowed);
+  const concurrency = researchConcurrency();
+
+  const collected = await mapPool(toCollect, concurrency, async (r) => {
+    const live = isVendorCollectionEnabled()
+      ? await collectVendorPricing(r.vendor, r.step, task)
+      : null;
+
+    if (live) {
+      return {
+        _domain: r._domain,
+        name: r.vendor.name,
+        price_per_user: live.price_per_user,
+        trial_url: live.trial_url,
+        pricing_url: live.pricing_url,
+        why_startup: live.why_startup,
+        policy_status: r.verdict.decision,
+        collected: true,
+        collection_source: live.collection_source,
+        source_evidence: `Nimble fetch of ${live.pricing_url} after policy ${r.verdict.decision_id}`,
+      } satisfies Row;
+    }
+
+    return {
+      _domain: r._domain,
+      name: r.vendor.name,
+      price_per_user: r.vendor.price_per_user,
+      trial_url: r.vendor.trial_url,
+      pricing_url: r.vendor.pricing_url,
+      why_startup: r.vendor.why_startup,
+      policy_status: r.verdict.decision,
+      collected: true,
+      collection_source: "catalog_fallback" as const,
+      source_evidence: `Policy allowed; catalog data used (Nimble pricing fetch failed) ${r.verdict.decision_id}`,
+    };
+  });
+
+  return [...blocked, ...collected].map(({ _domain: _, ...rest }) => rest);
 }
 
 /**
@@ -95,16 +147,17 @@ export async function runResearchOrchestrator(
     `[research] planner=${planner_mode}${planner_fallback ? " (fallback)" : ""} → ${steps.length} steps, ${vendors.length} vendors`
   );
 
-  const evaluations: ResearchResult["evaluations"] = [];
-  const verdicts: Verdict[] = [];
-
   const demoMode = process.env.POLICYGUARD_DEMO_MODE === "true";
   const skipLlm = !process.env.ANTHROPIC_API_KEY?.trim();
   const skipPublish =
     process.env.POLICYGUARD_RESEARCH_SKIP_PUBLISH !== "false";
+  const concurrency = researchConcurrency();
 
-  for (let i = 0; i < steps.length; i++) {
-    const step = steps[i];
+  console.info(
+    `[research] running ${steps.length} policy steps (concurrency=${concurrency})`
+  );
+
+  const stepResults = await mapPool(steps, concurrency, async (step, i) => {
     console.info(
       `[research] step ${i + 1}/${steps.length}: ${step.label} (live=${!demoMode})`
     );
@@ -116,19 +169,21 @@ export async function runResearchOrchestrator(
     console.info(
       `[research]   → ${verdict.decision} | pipeline=${meta.mode} | nimble=${meta.nimble_pages_fetched} | senso_chunks=${meta.senso_chunks}`
     );
-    verdicts.push(verdict);
-    evaluations.push({
+    await logDecision(step.evaluate, verdict);
+    return {
       label: step.label,
       request: step.evaluate,
       verdict,
       pipeline_meta: meta,
-    });
-    await logDecision(step.evaluate, verdict);
-  }
+    };
+  });
+
+  const evaluations = stepResults;
+  const verdicts = stepResults.map((e) => e.verdict);
 
   const counts = countByDecision(verdicts);
   const source_policy_map = buildSourcePolicyMap(steps, verdicts);
-  const vendorResults = buildVendors(vendors, steps, verdicts);
+  const vendorResults = await buildVendors(vendors, steps, verdicts, input.task);
 
   const crmEval = evaluations.find((e) =>
     e.request.intended_action.action_type.includes("crm")
@@ -152,7 +207,7 @@ export async function runResearchOrchestrator(
     planner_mode,
     planner_fallback,
     status: collectedCount > 0 ? "completed" : "partial",
-    summary: `Checked ${steps.length} planned actions (${planner_mode} planner${planner_fallback ? ", fixed fallback" : ""}) across ${vendors.length} vendor domains. Collected pricing for ${collectedCount} vendors. Blocked risky steps (LinkedIn: ${linkedinBlocked ? "yes" : "no"}, aggregator: ${aggregatorBlocked ? "yes" : "no"}). CRM import requires human review.`,
+    summary: `Checked ${steps.length} planned actions (${planner_mode} planner${planner_fallback ? ", fixed fallback" : ""}) across ${vendors.length} vendor domains. Collected pricing for ${collectedCount} vendors${isVendorCollectionEnabled() ? " (Nimble when allowed)" : ""}. Blocked risky steps (LinkedIn: ${linkedinBlocked ? "yes" : "no"}, aggregator: ${aggregatorBlocked ? "yes" : "no"}). CRM import requires human review.`,
     sources_discovered: steps.length,
     sources_checked: steps.length,
     sources_usable: counts.usable,

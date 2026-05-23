@@ -10,7 +10,12 @@ import { generateVerdictFromChunks } from "@/lib/verdict-llm";
 import { publishVerdictToCited } from "@/lib/verdict-publish";
 
 export type PipelineMeta = {
-  mode: "demo_fixture" | "senso_kb" | "nimble_live" | "rules_only";
+  mode:
+    | "demo_fixture"
+    | "senso_kb"
+    | "senso_kb+nimble_fallback"
+    | "nimble_live"
+    | "rules_only";
   demo_mode: boolean;
   nimble_pages_fetched: number;
   nimble_errors: string[];
@@ -93,7 +98,10 @@ export async function runEvaluatePipeline(
     } catch (e) {
       console.warn("[pipeline] Senso search failed, using rule heuristics only", e);
     }
-  } else if (nimbleBodies.length > 0) {
+  }
+
+  if (chunks.length === 0 && nimbleBodies.length > 0) {
+    const hadSensoAttempt = pipelineMode === "senso_kb";
     chunks = [
       {
         content_id: "nimble-live",
@@ -102,7 +110,7 @@ export async function runEvaluatePipeline(
         title: request.target.name,
       },
     ];
-    pipelineMode = "nimble_live";
+    pipelineMode = hadSensoAttempt ? "senso_kb+nimble_fallback" : "nimble_live";
   }
 
   let verdict: Verdict;

@@ -18,6 +18,9 @@ export const vendorResultSchema = z.object({
   policy_status: z.enum(["allowed", "blocked", "modify_recommended"]),
   collected: z.boolean(),
   source_evidence: z.string().optional(),
+  collection_source: z
+    .enum(["catalog", "nimble_heuristic", "nimble_llm", "catalog_fallback"])
+    .optional(),
 });
 
 export const sourcePolicyEntrySchema = z.object({

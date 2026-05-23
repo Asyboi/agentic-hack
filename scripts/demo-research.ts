@@ -61,7 +61,8 @@ async function main() {
   console.log("\n=== VENDORS (pricing collected only if policy allowed) ===");
   for (const v of json.vendors ?? []) {
     console.log(
-      `- ${v.name} | ${v.price_per_user} | policy: ${v.policy_status} | collected: ${v.collected}`
+      `- ${v.name} | ${v.price_per_user} | policy: ${v.policy_status} | collected: ${v.collected}` +
+        (v.collection_source ? ` | source: ${v.collection_source}` : "")
     );
   }
 
