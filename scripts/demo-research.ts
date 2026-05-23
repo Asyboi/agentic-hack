@@ -1,7 +1,16 @@
 /**
  * Marketplace demo — one natural-language task → planned actions → policy checks → vendor packet.
+ *
+ * Usage:
+ *   npm run demo:research              # summary in terminal + writes research-response.json
+ *   npm run demo:research -- --full    # also print full JSON to terminal
  */
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
+
 const BASE = process.env.POLICYGUARD_BASE_URL ?? "http://localhost:3000";
+const printFull = process.argv.includes("--full");
+const outFile = join(process.cwd(), "research-response.json");
 
 const PM_TASK =
   "Find 20 project-management tools under $50/user, with current pricing, free-trial links, and a one-line why each fits a 50-person startup. Put everything in our CRM.";
@@ -59,7 +68,15 @@ async function main() {
   console.log("\n=== CRM STEP ===");
   console.log(json.crm_step);
 
-  console.log("\n(Full JSON in research-response.json — run from repo root)");
+  writeFileSync(outFile, JSON.stringify(json, null, 2), "utf8");
+  console.log(`\nFull API response saved → ${outFile}`);
+
+  if (printFull) {
+    console.log("\n=== FULL JSON ===\n");
+    console.log(JSON.stringify(json, null, 2));
+  } else {
+    console.log("Tip: npm run demo:research -- --full   (print entire JSON to terminal)");
+  }
 }
 
 main().catch((e) => {

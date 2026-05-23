@@ -3,6 +3,8 @@ node_modules
 tsconfig.tsbuildinfo
 .env
 .env.local
+research-response.json
+nimble-samples/
 *.log
 .DS_Store
 .vercel

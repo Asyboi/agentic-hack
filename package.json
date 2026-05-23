@@ -9,6 +9,7 @@
     "demo": "tsx scripts/demo-three-actions.ts",
     "test:senso": "tsx scripts/test-live-senso.ts",
     "test:nimble": "tsx scripts/test-nimble.ts",
+    "nimble:sample": "tsx scripts/save-nimble-sample.ts",
     "demo:research": "tsx scripts/demo-research.ts",
     "test:senso": "tsx scripts/test-senso.ts",
     "clickhouse:init": "tsx scripts/init-clickhouse.ts",

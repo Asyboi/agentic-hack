@@ -39,6 +39,7 @@ The **API is real** — any agent can call `POST /api/evaluate` or `POST /api/re
 npm run demo              # 3 compliance checks (demo mode)
 npm run demo:research     # PM-tools marketplace task (demo mode)
 npm run test:senso        # verify Senso CLI + LinkedIn chunks (needs SENSO_API_KEY)
+npm run test:nimble       # verify Nimble Extract (needs NIMBLE_API_KEY in .env.local)
 npm run clickhouse:init   # create decisions table (needs CLICKHOUSE_URL)
 curl localhost:3000/api/stats   # decision counts
 ```
