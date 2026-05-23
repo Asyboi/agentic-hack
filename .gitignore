@@ -3,6 +3,7 @@ node_modules
 tsconfig.tsbuildinfo
 .env
 .env.local
+cdp_api_key.json
 research-response.json
 nimble-samples/
 *.log
