@@ -4,6 +4,7 @@ import { z } from "zod";
 import { wrapFetchWithPayment, createSigner } from "x402-fetch";
 import { generatePrivateKey } from "viem/accounts";
 import { DEMO_REQUESTS } from "@/lib/demo-fixtures";
+import { buildCustomSiteRequest } from "@/lib/custom-site";
 import type { Verdict } from "@/lib/schemas/verdict";
 
 export type AgentEvent =
@@ -53,8 +54,17 @@ const SCENARIO_HINTS: Record<ScenarioId, string> = {
 
 export async function runAgent(
   baseUrl: string,
-  emit: AgentEmit
+  emit: AgentEmit,
+  userPrompt?: string
 ): Promise<void> {
+  if (userPrompt) {
+    await runCustomAgent(baseUrl, emit, userPrompt);
+  } else {
+    await runDemoAgent(baseUrl, emit);
+  }
+}
+
+async function runDemoAgent(baseUrl: string, emit: AgentEmit): Promise<void> {
   await emit({
     type: "thought",
     text: `Agent online. Three planned actions on the open web: scrape LinkedIn, read OpenAI pricing, store emails in HubSpot. I will check policy with PolicyGuard before each one.`,
@@ -132,16 +142,109 @@ export async function runAgent(
           },
         }),
       },
-      onStepFinish: async ({ text, toolCalls }) => {
+      onStepFinish: async ({ text }) => {
         const trimmed = text?.trim();
         if (trimmed) {
           await emit({ type: "thought", text: trimmed });
         }
-        for (const call of toolCalls ?? []) {
-          if (call.toolName !== "check_policy") continue;
-          const scenario = (call.args as { scenario_id?: ScenarioId } | undefined)
-            ?.scenario_id;
-          if (!scenario) continue;
+      },
+    });
+
+    const finalText = result.text?.trim();
+    if (finalText) {
+      await emit({ type: "summary", text: finalText });
+    } else {
+      await emit({
+        type: "summary",
+        text: `Agent finished after ${result.steps?.length ?? 0} steps.`,
+      });
+    }
+  } catch (e) {
+    await emit({
+      type: "error",
+      message: e instanceof Error ? e.message : String(e),
+    });
+  }
+}
+
+async function runCustomAgent(
+  baseUrl: string,
+  emit: AgentEmit,
+  userPrompt: string
+): Promise<void> {
+  await emit({
+    type: "thought",
+    text: `Agent online. Checking policy compliance for: "${userPrompt}"`,
+  });
+
+  await demonstrateX402Payment(baseUrl, emit);
+
+  try {
+    const result = await generateText({
+      model: anthropic("claude-sonnet-4-20250514"),
+      maxSteps: 6,
+      system: CUSTOM_AGENT_SYSTEM_PROMPT,
+      prompt: userPrompt,
+      tools: {
+        check_policy: tool({
+          description:
+            "Check whether a described action on a website is compliant with that site's policies. Provide the site name, what you want to do, and the URL of the site's Terms of Service or privacy policy.",
+          parameters: z.object({
+            site: z.string().describe("The website name, e.g. 'Airbnb', 'LinkedIn'"),
+            action_description: z.string().describe("What the agent wants to do on the site"),
+            policy_url: z.string().describe("URL of the site's Terms of Service or privacy policy"),
+          }),
+          execute: async ({ site, action_description, policy_url }) => {
+            await emit({
+              type: "action",
+              tool: "check_policy",
+              input: { target: site, action: action_description },
+            });
+
+            const body = buildCustomSiteRequest(site, policy_url, action_description);
+
+            const res = await fetch(`${baseUrl}/api/evaluate`, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify(body),
+            });
+
+            const json = (await res.json()) as Verdict & {
+              error?: string;
+              message?: string;
+            };
+
+            if (!res.ok || !json.decision) {
+              await emit({
+                type: "error",
+                message: `evaluate failed: ${json.error ?? json.message ?? res.status}`,
+              });
+              return {
+                decision: "blocked" as const,
+                reason: `PolicyGuard call failed: ${json.error ?? res.status}`,
+                matched_rules: [],
+                requires_human_review: true,
+              };
+            }
+
+            await emit({ type: "verdict", scenario: site, verdict: json });
+
+            return {
+              decision: json.decision,
+              risk_level: json.risk_level,
+              reason: json.reason,
+              matched_rules: json.matched_rules,
+              safe_alternative: json.machine_instruction?.safe_alternative,
+              requires_human_review: json.machine_instruction?.requires_human_review,
+              citation_source: json.citation?.source_url,
+            };
+          },
+        }),
+      },
+      onStepFinish: async ({ text }) => {
+        const trimmed = text?.trim();
+        if (trimmed) {
+          await emit({ type: "thought", text: trimmed });
         }
       },
     });
@@ -214,6 +317,15 @@ async function demonstrateX402Payment(
     });
   }
 }
+
+const CUSTOM_AGENT_SYSTEM_PROMPT = `You are PolicyGuard Agent, a compliance checker for AI agent actions on the open web.
+
+RULE: Call check_policy exactly once for the action the user described.
+- Extract the target site name from their description (e.g. "Airbnb", "LinkedIn", "Twitter").
+- Use the site's primary Terms of Service or robots.txt URL as policy_url.
+- Use the user's description as action_description.
+
+After the check, state in 2-3 sentences whether you would proceed and why, citing the matched rules if any.`;
 
 const AGENT_SYSTEM_PROMPT = `You are PolicyGuard Agent, an autonomous AI agent operating on the open web.
 You can take three kinds of actions: scraping pages, reading pricing, and storing user data.

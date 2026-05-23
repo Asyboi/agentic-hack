@@ -106,6 +106,59 @@
   border-color: var(--pg-text-dim);
 }
 
+.promptRow {
+  padding: 1rem 2rem;
+  border-bottom: 1px solid var(--pg-line);
+  background: var(--pg-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.promptLabel {
+  font-family: var(--pg-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pg-text-faint);
+  user-select: none;
+}
+
+.promptArea {
+  font-family: var(--pg-mono);
+  font-size: 0.88rem;
+  color: var(--pg-text);
+  background: var(--pg-bg);
+  border: 1px solid var(--pg-line-strong);
+  border-radius: 2px;
+  padding: 0.55rem 0.75rem;
+  resize: vertical;
+  width: 100%;
+  box-sizing: border-box;
+  line-height: 1.5;
+  outline: none;
+  transition: border-color 0.12s ease;
+}
+
+.promptArea::placeholder {
+  color: var(--pg-text-faint);
+}
+
+.promptArea:focus {
+  border-color: var(--pg-accent);
+}
+
+.promptArea:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .promptRow {
+    padding: 0.85rem 1.25rem;
+  }
+}
+
 .stateBar {
   display: flex;
   align-items: center;

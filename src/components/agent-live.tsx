@@ -71,6 +71,7 @@ function decisionLabel(decision: string): string {
 export function AgentLive() {
   const [events, setEvents] = useState<AgentEvent[]>([]);
   const [running, setRunning] = useState(false);
+  const [prompt, setPrompt] = useState("");
   const sourceRef = useRef<EventSource | null>(null);
   const feedRef = useRef<HTMLDivElement | null>(null);
 
@@ -91,7 +92,10 @@ export function AgentLive() {
     setEvents([]);
     setRunning(true);
 
-    const es = new EventSource("/api/agent-run");
+    const url = prompt.trim()
+      ? `/api/agent-run?prompt=${encodeURIComponent(prompt.trim())}`
+      : "/api/agent-run";
+    const es = new EventSource(url);
     sourceRef.current = es;
 
     es.onmessage = (msg) => {
@@ -122,12 +126,13 @@ export function AgentLive() {
   const verdictCount = events.filter((e) => e.type === "verdict").length;
   const x402Count = events.filter((e) => e.type === "x402_settled").length;
   const status = running ? "live" : events.length > 0 ? "complete" : "idle";
+  const isCustom = prompt.trim().length > 0;
 
   return (
     <section className={styles.shell}>
       <div className={styles.header}>
         <div className={styles.titleBlock}>
-          <p className={styles.eyebrow}>Live agent — 03</p>
+          <p className={styles.eyebrow}>Live agent — {isCustom ? "custom" : "03"}</p>
           <h2 className={styles.title}>
             An autonomous agent, asking permission first.
           </h2>
@@ -150,6 +155,21 @@ export function AgentLive() {
         </div>
       </div>
 
+      <div className={styles.promptRow}>
+        <label className={styles.promptLabel} htmlFor="agent-prompt">
+          Describe an action — leave blank for the 3-scenario demo
+        </label>
+        <textarea
+          id="agent-prompt"
+          className={styles.promptArea}
+          rows={2}
+          placeholder="e.g. I want to scrape Airbnb listings and store prices in a database"
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          disabled={running}
+        />
+      </div>
+
       <div className={styles.stateBar}>
         <span className={styles.statePill}>
           <span
@@ -163,7 +183,8 @@ export function AgentLive() {
           x402 settled / {x402Count.toString().padStart(2, "0")}
         </span>
         <span className={styles.statePill}>
-          verdicts / {verdictCount.toString().padStart(2, "0")} of 03
+          verdicts / {verdictCount.toString().padStart(2, "0")}
+          {!isCustom && " of 03"}
         </span>
       </div>
 
