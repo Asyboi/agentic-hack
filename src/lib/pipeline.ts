@@ -97,6 +97,9 @@ function inferRulesFromRequest(request: EvaluateRequest): string[] {
     rules.push("no bots", "no automated access");
   }
   if (a.frequency === "bulk") rules.push("bulk automated collection");
+  if (a.action_type === "scrape_listing_aggregator") {
+    rules.push("bulk automated collection", "commercial reuse");
+  }
   if (a.contains_pii && a.commercial_use) {
     rules.push("personal data consent", "commercial reuse");
   }

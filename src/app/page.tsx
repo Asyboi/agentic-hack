@@ -6,17 +6,18 @@ export default function Home() {
         Agent Policy Firewall — machine-enforceable runtime decisions for web-acting agents.
       </p>
       <pre style={{ background: "#111", color: "#eee", padding: "1rem", borderRadius: 8 }}>
-        {`POST /api/evaluate
-Content-Type: application/json
+        {`POST /api/evaluate     — one action, one target → verdict
+POST /api/research     — marketplace task → plan → many verdicts → vendor packet
 
-{
-  "agent_id": "sales-prospecting-agent",
-  "target": { "name": "LinkedIn", "policy_content_id": "..." },
-  "intended_action": { "action_type": "collect_profiles", ... }
-}`}
+# Single action
+{ "agent_id": "...", "target": {...}, "intended_action": {...} }
+
+# Full task (orchestrator)
+{ "agent_id": "marketplace-buyer", "task": "Find 20 PM tools...", "max_vendors": 5 }`}
       </pre>
       <p>
-        Demo harness: <code>npm run demo</code>
+        Demos: <code>npm run demo</code> (3 compliance actions) ·{" "}
+        <code>npm run demo:research</code> (PM tools marketplace task)
       </p>
     </main>
   );
