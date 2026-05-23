@@ -1,15 +1,25 @@
 /**
- * Run clickhouse-init.sql against CLICKHOUSE_URL (optional setup).
- * Usage: CLICKHOUSE_URL=https://... npm run clickhouse:init
+ * Run clickhouse-init.sql against CLICKHOUSE_URL (reads .env.local).
+ * Usage: npm run clickhouse:init
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createClient } from "@clickhouse/client";
+import { loadEnvLocal } from "./load-env-local";
+
+loadEnvLocal();
 
 async function main() {
-  const url = process.env.CLICKHOUSE_URL;
+  const url = process.env.CLICKHOUSE_URL?.trim();
   if (!url) {
-    console.error("Set CLICKHOUSE_URL");
+    console.error(
+      "Missing CLICKHOUSE_URL.\n" +
+        "Add to .env.local (from ClickHouse Cloud → Connect):\n" +
+        "  CLICKHOUSE_URL=https://xxxx.clickhouse.cloud:8443\n" +
+        "  CLICKHOUSE_USER=default\n" +
+        "  CLICKHOUSE_PASSWORD=...\n" +
+        "  CLICKHOUSE_DATABASE=policyguard"
+    );
     process.exit(1);
   }
 
