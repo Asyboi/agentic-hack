@@ -180,4 +180,3 @@ Save the returned `content_id` and use it in the subsequent `search context` cal
 1. **Senso CLI output includes header lines before the JSON.** Always extract the JSON object with a regex/parse — don't `JSON.parse(stdout)` directly.
 2. **`--require-scoped-ids` is easy to forget.** Without it, search returns chunks from ALL ingested docs, polluting the verdict context.
 3. **Processing time after ingest:** 5-15 seconds before a doc is queryable. If you ingest live, poll `senso kb get <node_id>` and wait for `processing_status: complete`.
-4. **The MeloMed org has a separate Senso instance from Policy Guard.** Don't confuse them. `senso whoami` shows which org you're authenticated against.
