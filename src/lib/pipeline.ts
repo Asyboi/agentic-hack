@@ -5,11 +5,13 @@ import type { EvaluateRequest } from "@/lib/schemas/evaluate-request";
 import type { Verdict } from "@/lib/schemas/verdict";
 import { searchPolicy } from "@/lib/senso";
 import { generateVerdictFromChunks } from "@/lib/verdict-llm";
+import { publishVerdictToCited } from "@/lib/verdict-publish";
 
 export type PipelineOptions = {
   demoKey?: keyof typeof DEMO_REQUESTS;
   skipSenso?: boolean;
   skipLlm?: boolean;
+  skipPublish?: boolean;
 };
 
 /**
@@ -28,10 +30,11 @@ export async function runEvaluatePipeline(
   const demoMode = process.env.POLICYGUARD_DEMO_MODE === "true";
 
   if (demoMode && options.demoKey && DEMO_VERDICTS[options.demoKey]) {
-    return {
+    const fixture = {
       ...DEMO_VERDICTS[options.demoKey],
       decision_id: `dec_${randomUUID().slice(0, 8)}`,
     };
+    return finalizeVerdict(request, fixture, options);
   }
 
   const actionDescription =
@@ -61,26 +64,44 @@ export async function runEvaluatePipeline(
     });
     verdict = heuristicVerdict(request, engine, chunks[0]?.chunk_text);
   } else {
-    verdict = await generateVerdictFromChunks(request, chunks);
-    const engine = evaluateRules({
+    const engineFromRequest = evaluateRules({
       request,
-      normalized_rules: normalizeExtractedRules(verdict.matched_rules),
+      normalized_rules: normalizeExtractedRules(
+        inferRulesFromRequest(request)
+      ),
     });
-    verdict = {
-      ...verdict,
-      decision: engine.suggested_decision,
-      risk_level: engine.suggested_risk,
-      matched_rules: [
-        ...new Set([...verdict.matched_rules, ...engine.matched_rules]),
-      ],
-      machine_instruction: {
-        ...verdict.machine_instruction,
-        ...engine.machine_flags,
-      } as Verdict["machine_instruction"],
-    };
+    try {
+      verdict = await generateVerdictFromChunks(request, chunks);
+      const engine = evaluateRules({
+        request,
+        normalized_rules: normalizeExtractedRules(verdict.matched_rules),
+      });
+      verdict = {
+        ...verdict,
+        decision: engine.suggested_decision,
+        risk_level: engine.suggested_risk,
+        matched_rules: [
+          ...new Set([...verdict.matched_rules, ...engine.matched_rules]),
+        ],
+        machine_instruction: {
+          ...verdict.machine_instruction,
+          ...engine.machine_flags,
+        } as Verdict["machine_instruction"],
+      };
+    } catch (e) {
+      console.warn(
+        "[pipeline] LLM verdict failed, using Senso chunks + rule engine",
+        e
+      );
+      verdict = heuristicVerdict(
+        request,
+        engineFromRequest,
+        chunks[0]?.chunk_text
+      );
+    }
   }
 
-  return {
+  const withMeta: Verdict = {
     ...verdict,
     decision_id: verdict.decision_id ?? `dec_${randomUUID().slice(0, 8)}`,
     policy_version: {
@@ -88,6 +109,36 @@ export async function runEvaluatePipeline(
       checked_at: new Date().toISOString(),
     },
   };
+
+  return finalizeVerdict(request, withMeta, options);
+}
+
+async function finalizeVerdict(
+  request: EvaluateRequest,
+  verdict: Verdict,
+  options: PipelineOptions
+): Promise<Verdict> {
+  const skipPublish =
+    options.skipPublish || process.env.POLICYGUARD_SKIP_PUBLISH === "true";
+
+  if (skipPublish || !process.env.SENSO_API_KEY) {
+    return verdict;
+  }
+
+  try {
+    const url = await publishVerdictToCited(
+      request,
+      verdict,
+      options.demoKey
+    );
+    if (url) {
+      return { ...verdict, cited_md_url: url };
+    }
+  } catch (e) {
+    console.warn("[pipeline] Senso publish failed", e);
+  }
+
+  return verdict;
 }
 
 function inferRulesFromRequest(request: EvaluateRequest): string[] {

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PolicyGuard — Compliance API for AI Agents on the Open Web</title>
+<meta name="description" content="PolicyGuard is an autonomous compliance API for AI agents. It returns allowed / blocked / modify verdicts for proposed actions on the open web, grounded in real site policies, with citations and payment via x402.">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 760px; margin: 0 auto; padding: 40px 24px; }
+  h1 { font-size: 2.4rem; line-height: 1.2; margin-bottom: 0.5rem; }
+  h2 { font-size: 1.5rem; margin-top: 2.5rem; margin-bottom: 0.75rem; border-bottom: 2px solid #1a1a1a; padding-bottom: 0.25rem; }
+  h3 { font-size: 1.15rem; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+  p { margin-bottom: 1rem; }
+  ul, ol { margin-left: 1.5rem; margin-bottom: 1rem; }
+  li { margin-bottom: 0.4rem; }
+  code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-size: 0.9rem; }
+  pre { background: #f4f4f4; padding: 16px; border-radius: 6px; overflow-x: auto; margin-bottom: 1rem; }
+  pre code { background: none; padding: 0; }
+  .tagline { font-size: 1.2rem; color: #555; margin-bottom: 2rem; }
+  .status-badge { display: inline-block; background: #fff3cd; color: #856404; padding: 4px 10px; border-radius: 4px; font-size: 0.85rem; margin-bottom: 1rem; }
+  nav { margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid #ddd; }
+  nav a { margin-right: 16px; color: #0066cc; text-decoration: none; font-size: 0.95rem; }
+  footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; font-size: 0.85rem; color: #777; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="#what">What it is</a>
+  <a href="#how">How it works</a>
+  <a href="#products">Products</a>
+  <a href="#pricing">Pricing</a>
+  <a href="#stack">Stack</a>
+  <a href="#team">Team</a>
+  <a href="#faq">FAQ</a>
+</nav>
+
+<h1>PolicyGuard</h1>
+<p class="tagline">A compliance API for AI agents acting on the open web. Returns a verdict for any proposed action — grounded in real site policies, with citations.</p>
+<span class="status-badge">Prototype — built at the Agentic Engineering Hackathon (hosted by tokens&amp;), May 23, 2026</span>
+
+<h2 id="what">What PolicyGuard Is</h2>
+
+<p>AI agents are taking real actions on the open web — scraping sites, posting content, sending messages, making purchases. Each of these actions is governed by some site's terms of service, content policy, or community rules. Today, most agents either ignore those policies or hardcode them poorly, leading to account bans, legal exposure, and broken automations.</p>
+
+<p>PolicyGuard is a paid HTTP API that AI agents call before they act. Given a proposed action and a target site, it returns a structured compliance decision:</p>
+
+<ul>
+  <li><strong>Verdict:</strong> <code>allowed</code>, <code>blocked</code>, or <code>modify</code></li>
+  <li><strong>Risk level:</strong> low, medium, or high</li>
+  <li><strong>Reason:</strong> a short human-readable explanation</li>
+  <li><strong>Safe alternative:</strong> if blocked, what the agent could do instead</li>
+  <li><strong>Cited evidence:</strong> URL and quoted passage from the actual policy document</li>
+</ul>
+
+<p>It is built for AI agents to call autonomously. Payment, decision, and citation all happen in one HTTP round-trip.</p>
+
+<h2 id="problem">The Problem We Are Trying to Solve</h2>
+
+<p>Autonomous AI agents are now real and shipping. Anthropic's Computer Use, OpenAI's Operator, and similar tools let agents perform actions on websites without a human approving each step. As more of these agents go live, two patterns are emerging:</p>
+
+<ol>
+  <li>Agents get banned from platforms for violating terms of service they never read.</li>
+  <li>Developers building agents waste hours hand-coding compliance logic for each site, which goes stale the moment the site updates its terms.</li>
+</ol>
+
+<p>PolicyGuard exists to give every agent a single, paid lookup for "am I allowed to do this here, right now?" — backed by the live policy text rather than a hardcoded guess.</p>
+
+<h2 id="how">How It Works</h2>
+
+<p>A PolicyGuard request follows a five-step pipeline. Each step is automated; no human is in the loop between the agent paying and the verdict being returned.</p>
+
+<ol>
+  <li><strong>Agent calls PolicyGuard</strong> with the proposed action and target site.</li>
+  <li><strong>x402 paywall</strong> challenges the agent for a micropayment. The agent autonomously pays and retries.</li>
+  <li><strong>Nimble fetches the relevant policy page(s)</strong> from the target site in real time.</li>
+  <li><strong>Senso grounds the policy text</strong>, returning the chunks most relevant to the proposed action.</li>
+  <li><strong>An LLM produces the verdict</strong> using those chunks, and the result is logged to ClickHouse and published to a public citeable destination (cited.md).</li>
+</ol>
+
+<h3>Why each decision is also published</h3>
+<p>Every PolicyGuard verdict gets published to cited.md as a permanent, citeable record. This means future agents can discover prior decisions and cite them, rather than re-paying for the same lookup. The corpus compounds. The agentic web gets shared infrastructure for compliance.</p>
+
+<h2 id="products">Products</h2>
+
+<h3>PolicyGuard API</h3>
+<p>The single product. A paid HTTP endpoint, <code>POST /evaluate</code>, that returns a structured decision object. Designed to be called by other AI agents, not directly by humans.</p>
+
+<h3>Decision Corpus on cited.md</h3>
+<p>A public, growing corpus of PolicyGuard decisions, each one citeable by URL and grounded in the original policy text. Agents can search this corpus before paying for a fresh lookup.</p>
+
+<h3>ClickHouse-backed Analytics</h3>
+<p>Every decision is logged with full context. The analytics layer enables real-time queries on agent behavior: which sites get the most lookups, which actions are most often blocked, which agents trigger the highest risk verdicts.</p>
+
+<h2 id="pricing">Pricing</h2>
+
+<p>PolicyGuard charges per query via x402, the HTTP 402 payment standard for AI-agent micropayments. The exact per-query price is set per environment and is intentionally not committed here while the prototype is being tuned.</p>
+
+<p>Payment is performed by the calling agent autonomously, on the Base Sepolia testnet for the prototype. There is no signup, no contract, and no account — an agent that has a wallet can pay and receive a verdict on first request.</p>
+
+<h2 id="stack">Built With</h2>
+
+<p>PolicyGuard is built using four sponsor tools from the Agentic Engineering Hackathon (hosted by tokens&amp;):</p>
+
+<ul>
+  <li><strong>Nimble</strong> — fetches policy pages from target sites in real time.</li>
+  <li><strong>Senso</strong> — grounds and chunks policy text into a knowledge base, then surfaces the chunks most relevant to a given proposed action. Senso also publishes decision artifacts to cited.md, closing the loop from knowledge base to agent-discoverable content.</li>
+  <li><strong>ClickHouse</strong> — stores every PolicyGuard decision with full context for real-time analytics on agent behavior across the open web.</li>
+  <li><strong>x402</strong> — the HTTP 402 payment rail that lets the calling agent pay for each request without a human in the loop.</li>
+</ul>
+
+<h2 id="autonomy">Autonomy</h2>
+
+<p>Two layers of autonomy run during a typical PolicyGuard request, with no human intervention in either:</p>
+
+<ul>
+  <li><strong>Outer loop:</strong> The calling agent has its own goal (for example, "scrape job listings"). It autonomously discovers PolicyGuard, autonomously pays the x402 challenge, autonomously parses the verdict, and autonomously decides what to do next based on the response.</li>
+  <li><strong>Inner loop:</strong> PolicyGuard itself autonomously selects which tools to call (Nimble for fresh fetch, Senso for grounding, ClickHouse for logging) and synthesizes the final verdict using an LLM.</li>
+</ul>
+
+<h2 id="demo">Demo Scenario</h2>
+
+<p>The reference scenario for the hackathon demo is a job-search agent considering whether to scrape LinkedIn profiles.</p>
+
+<ol>
+  <li>The agent submits the proposed action: <em>"Scrape 100 profiles from linkedin.com matching 'software engineer'."</em></li>
+  <li>PolicyGuard is challenged via x402; the agent pays.</li>
+  <li>Nimble fetches LinkedIn's User Agreement.</li>
+  <li>Senso surfaces the relevant chunks on automated access and bot use.</li>
+  <li>An LLM returns a verdict of <code>blocked</code>, with a citation to LinkedIn's prohibition on bots and unauthorized automated methods.</li>
+  <li>The verdict is logged to ClickHouse and published to cited.md.</li>
+</ol>
+
+<h2 id="team">Team</h2>
+
+<p>PolicyGuard is being built by a four-person team at the Agentic Engineering Hackathon (hosted by tokens&amp;), May 23, 2026:</p>
+
+<ul>
+  <li><strong>Candy</strong> — Senso integration (knowledge base, content generation, publishing)</li>
+  <li><strong>Kyle</strong> — Nimble integration (policy page fetching)</li>
+  <li><strong>Aarya</strong> — agent framework, HTTP API, LLM verdict layer</li>
+  <li><strong>Aslan</strong> — x402 monetization rail, agent marketplace integration</li>
+</ul>
+
+<h2 id="faq">FAQ</h2>
+
+<h3>Is PolicyGuard a product I can use today?</h3>
+<p>No. It is a prototype built during a one-day hackathon. It is not in production and is not currently being offered as a paid service.</p>
+
+<h3>Who is PolicyGuard for?</h3>
+<p>Other AI agents. The API is designed to be called by autonomous software, not by humans clicking a UI. Developers building AI agents who want to avoid violating site terms of service are the intended audience.</p>
+
+<h3>Why use x402 instead of a normal API key model?</h3>
+<p>x402 lets a calling agent pay per request without any prior signup or account. For autonomous agents that may need to discover and use PolicyGuard at runtime without a human provisioning credentials, this is the cleanest payment model.</p>
+
+<h3>What is cited.md?</h3>
+<p>A public destination for grounded, citeable, agent-discoverable content. PolicyGuard publishes every decision there so future agents can find and cite prior verdicts rather than re-querying.</p>
+
+<h3>What happens if the target site does not have a clear policy?</h3>
+<p>The verdict reflects that. PolicyGuard returns a verdict of <code>modify</code> or <code>blocked</code> when the policy is ambiguous, with the reason explicitly stating that no clear authorization was found.</p>
+
+<h3>Does PolicyGuard guarantee legal compliance?</h3>
+<p>No. It is a tool that surfaces and cites the relevant policy text. The calling agent (and the agent's operator) remain responsible for the action taken. PolicyGuard provides citation and verdict, not legal counsel.</p>
+
+<h2 id="status">Project Status</h2>
+
+<p>PolicyGuard is being built in approximately five hours on May 23, 2026, at the Agentic Engineering Hackathon (hosted by tokens&amp;). As of this page being written, the team is mid-build. No production deployment exists. There are no users, no revenue, and no integration partners beyond the four sponsor tools listed above.</p>
+
+<p>This page exists as a research seed for the team's knowledge base and may be updated or replaced as the project evolves.</p>
+
+<footer>
+  <p>PolicyGuard prototype — Agentic Engineering Hackathon (hosted by tokens&amp;) — May 23, 2026.</p>
+  <p>Built with Nimble, Senso, ClickHouse, and x402.</p>
+</footer>
+
+</body>
+</html>

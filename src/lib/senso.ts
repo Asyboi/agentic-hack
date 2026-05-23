@@ -52,14 +52,24 @@ export async function publishDecision(markdown: string, meta: {
   summary: string;
   geo_question_id?: string;
 }): Promise<string | undefined> {
-  const payload = JSON.stringify({
+  const data = {
     geo_question_id: meta.geo_question_id ?? "",
     raw_markdown: markdown,
     seo_title: meta.seo_title,
     summary: meta.summary,
-  });
+  };
 
-  const cmd = `senso engine publish --data ${JSON.stringify(payload)} --output json --quiet`;
+  const cmd = [
+    "senso",
+    "engine",
+    "publish",
+    "--data",
+    JSON.stringify(data),
+    "--output",
+    "json",
+    "--quiet",
+  ].join(" ");
+
   const { stdout } = await execAsync(cmd, {
     env: {
       ...process.env,

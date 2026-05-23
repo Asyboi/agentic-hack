@@ -1,6 +1,16 @@
 import type { EvaluateRequest } from "@/lib/schemas/evaluate-request";
 import type { Verdict } from "@/lib/schemas/verdict";
 
+/**
+ * Optional GEO prompt IDs for cited.md publish (`senso prompts list`).
+ * Set in env: SENSO_GEO_PROMPT_LINKEDIN, SENSO_GEO_PROMPT_PRICING, SENSO_GEO_PROMPT_EMAIL
+ */
+export const DEMO_GEO_PROMPT_ENV_KEYS = {
+  linkedin_scrape: "SENSO_GEO_PROMPT_LINKEDIN",
+  pricing_read: "SENSO_GEO_PROMPT_PRICING",
+  email_crm: "SENSO_GEO_PROMPT_EMAIL",
+} as const;
+
 /** Pre-loaded Senso content IDs — plans/SENSO_INTEGRATION.md */
 export const DEMO_POLICIES = {
   linkedin: "a06ff6b1-a867-4b5f-bc33-aa0be186b6a4",

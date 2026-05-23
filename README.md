@@ -6,7 +6,9 @@
 
 ## Live demo
 
-- **Site:** https://policyguard-site.vercel.app
+- **Marketing site (source):** [`site/index.html`](site/index.html) → deployed at https://policyguard-site.vercel.app  
+  After pulling this repo, set Vercel project **Root Directory** to `site` if redeploying from GitHub.
+- **API:** `POST /api/evaluate` (Next.js app in this repo — deploy separately on Vercel)
 - **Published decision corpus:** [cited.md](https://cited.md) (search "policy-guard-3480")
 
 ## What it does

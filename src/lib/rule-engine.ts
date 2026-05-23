@@ -58,16 +58,17 @@ export function evaluateRules(input: RuleEngineInput): RuleEngineResult {
   }
 
   const criticalBlock =
-    matched.includes(RULE_IDS.NO_BULK) ||
     matched.includes(RULE_IDS.NO_PROFILE_STORAGE) ||
     (matched.includes(RULE_IDS.NO_BOTS) && action.action_type === "collect_profiles") ||
     (matched.includes(RULE_IDS.NO_BULK) &&
-      action.action_type === "scrape_listing_aggregator");
+      action.action_type !== "store_emails_in_crm" &&
+      action.action_type !== "scrape_listing_aggregator");
 
   const modify =
-    matched.includes(RULE_IDS.PII_CONSENT) ||
-    matched.includes(RULE_IDS.COMMERCIAL_REUSE) ||
-    action.action_type === "store_emails_in_crm";
+    (matched.includes(RULE_IDS.PII_CONSENT) ||
+      matched.includes(RULE_IDS.COMMERCIAL_REUSE) ||
+      action.action_type === "store_emails_in_crm") &&
+    action.action_type !== "collect_profiles";
 
   if (criticalBlock) {
     return {
