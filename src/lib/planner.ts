@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import type { EvaluateRequest } from "@/lib/schemas/evaluate-request";
 import type { ResearchRequest } from "@/lib/schemas/research";
 import { DEMO_POLICIES } from "@/lib/demo-fixtures";
@@ -7,6 +9,18 @@ import {
   PM_VENDOR_CATALOG,
   type VendorCatalogEntry,
 } from "@/lib/research-fixtures";
+
+function loadCrmPolicyIds(): Record<string, string> {
+  const p = resolve(process.cwd(), "scripts/crm-policy-ids.json");
+  if (!existsSync(p)) return {};
+  try {
+    return JSON.parse(readFileSync(p, "utf8")) as Record<string, string>;
+  } catch {
+    return {};
+  }
+}
+
+const CRM_POLICY_IDS = loadCrmPolicyIds();
 
 export type PlannedStep = {
   label: string;
@@ -103,7 +117,7 @@ export function planResearchSteps(
           type: "website",
           domain: v.domain,
           policy_urls: v.policy_urls,
-          policy_content_id: DEMO_POLICIES.openai,
+          policy_content_id: CRM_POLICY_IDS[v.domain] ?? DEMO_POLICIES.openai,
         },
         intended_action: {
           action_type: "read_pricing_page",
@@ -129,8 +143,8 @@ export function planResearchSteps(
       target: {
         name: "HubSpotCRM",
         type: "saas",
-        policy_urls: ["https://stripe.com/privacy"],
-        policy_content_id: DEMO_POLICIES.stripe_privacy,
+        policy_urls: ["https://legal.hubspot.com/privacy-policy"],
+        policy_content_id: CRM_POLICY_IDS["hubspot.com"] ?? DEMO_POLICIES.stripe_privacy,
       },
       intended_action: {
         action_type: "store_emails_in_crm",

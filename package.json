@@ -8,6 +8,7 @@
     "start": "next start",
     "demo": "tsx scripts/demo-three-actions.ts",
     "demo:research": "tsx scripts/demo-research.ts",
+    "prewarm": "tsx scripts/prewarm-crm-policies.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
