@@ -1,30 +1,36 @@
 # Payment Demo
 
-PolicyGuard currently has a small x402 payment demo at `GET /api/paid-demo`.
-It charges a tiny USDC amount on Base Sepolia before returning JSON.
+PolicyGuard has an optional x402 paywall. It is bypassed by default so teammates can develop without a wallet. Set `X402_MODE=live` locally to enforce payment.
+
+Live mode uses the Coinbase Developer Platform (CDP) Facilitator and declares Bazaar metadata, so successful settlements can be indexed by Bazaar and agentic.market.
 
 ## What It Proves
 
 The demo proves the payment-gated HTTP flow works end to end:
 
-1. A client calls `GET /api/paid-demo` without payment.
+1. A client calls a protected route without payment.
 2. The middleware returns `402 Payment Required` with x402 payment requirements.
 3. A wallet client signs and submits a Base Sepolia USDC payment.
 4. The client retries with an `X-PAYMENT` header.
 5. The x402 facilitator verifies and settles the payment.
-6. The route returns `200 OK` with the protected JSON response.
+6. If the settlement succeeds through CDP, the facilitator can index the route metadata for Bazaar / agentic.market.
+7. The route returns `200 OK` with the protected JSON response.
 
 If the payer and receiver are the same address, this is a self-payment. That is useful as a smoke test, but it does not prove revenue from another user.
 
-## Current Route
+## Protected Routes
 
-The protected route is:
+In live mode, middleware protects:
 
 ```text
 GET /api/paid-demo
+POST /api/evaluate
+POST /api/research
 ```
 
-After payment, it returns:
+The route matcher is path-based, so `GET /api/evaluate` and `GET /api/research` are also behind the paywall in live mode. In mock mode, all routes bypass the paywall.
+
+After payment, `/api/paid-demo` returns:
 
 ```json
 {
@@ -47,29 +53,52 @@ The route is intentionally simple. It does not provide the real PolicyGuard verd
 
 Payment config lives in `src/lib/x402-payment.ts`.
 
-Environment variables:
+Wallet, price, network, and facilitator are hard-coded:
 
-```bash
-X402_PAY_TO=0x6B842e0F980EE89182e6aD0C4FFE36Df8D544a4a
-X402_PRICE=$0.001
-X402_NETWORK=eip155:84532
-X402_FACILITATOR_URL=https://x402.org/facilitator
+```text
+payTo: 0x6B842e0F980EE89182e6aD0C4FFE36Df8D544a4a
+price: $0.001
+network: eip155:84532 / base-sepolia
+facilitator: https://api.cdp.coinbase.com/platform/v2/x402
 ```
 
-For local tunnel testing, also set:
+The only env flag is:
 
 ```bash
-X402_RESOURCE_URL=https://your-public-tunnel.example/api/paid-demo
+X402_MODE=mock
+# X402_MODE=live
 ```
 
-`X402_RESOURCE_URL` matters because external wallet/MCP clients usually cannot call `localhost`, and the x402 payment requirement should point at the public HTTPS URL the client will pay for.
+Unset or any value other than `live` behaves as mock and bypasses the paywall.
+
+Live mode also requires CDP credentials:
+
+```bash
+CDP_API_KEY_ID=...
+CDP_API_KEY_SECRET=...
+```
+
+Get these from the Coinbase Developer Platform portal. Do not commit real values.
+
+## Bazaar / Agentic.market
+
+The route metadata is attached with the x402 Bazaar extension in `src/lib/x402-payment.ts`.
+
+To get indexed:
+
+1. Run the app with `X402_MODE=live` and valid `CDP_API_KEY_ID` / `CDP_API_KEY_SECRET`.
+2. Serve the app from a public HTTPS URL.
+3. Make a successful x402 payment through the CDP Facilitator.
+4. Wait for Bazaar indexing; discovery results can take a few minutes to refresh.
+
+There is no separate manual registration step. The successful CDP settlement is what triggers indexing.
 
 ## Unpaid Request
 
-Start the app:
+Start the app in live mode:
 
 ```bash
-npm run dev
+X402_MODE=live npm run dev
 ```
 
 Then call the route without payment:
@@ -86,19 +115,18 @@ HTTP/1.1 402 Payment Required
 
 The body includes an `accepts` array with the price, network, receiver address, USDC asset address, and resource URL.
 
+In default mock mode, the same request returns `200 OK` because the paywall is bypassed.
+
 ## Paid Request With Coinbase Payments MCP
 
 The Coinbase payments MCP requires a public HTTPS URL, not `localhost`. For local testing, expose the dev server with a tunnel:
 
 ```bash
+X402_MODE=live npm run dev
 npx localtunnel --port 3000
 ```
 
-Restart the app with the public resource URL:
-
-```bash
-X402_RESOURCE_URL=https://your-tunnel.loca.lt/api/paid-demo npm run dev
-```
+Make sure the shell running `npm run dev` also has `CDP_API_KEY_ID` and `CDP_API_KEY_SECRET`.
 
 Discover the payment requirements:
 
@@ -141,6 +169,4 @@ If `From` and `To` are the same address, you paid yourself. The useful proof is 
 
 ## Moving Payment To A Real Route
 
-Right now only `/api/paid-demo` is protected in `src/middleware.ts`.
-
-To charge for real PolicyGuard verdicts, add `/api/evaluate` to the x402 route config and middleware matcher. Keep the demo route around as a low-risk smoke test.
+The real product routes are already listed in `src/lib/x402-payment.ts` and `src/middleware.ts`. Keep `X402_MODE=mock` for normal team development, and use `X402_MODE=live` when you want to verify the x402 flow.

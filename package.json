@@ -14,9 +14,11 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
+    "@clickhouse/client": "^1.18.5",
+    "@coinbase/x402": "^2.1.0",
     "@x402/core": "^2.13.0",
     "@x402/evm": "^2.13.0",
-    "@clickhouse/client": "^1.18.5",
+    "@x402/extensions": "^2.13.0",
     "ai": "^4.3.16",
     "next": "^15.3.3",
     "react": "^19.1.0",

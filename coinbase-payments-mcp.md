@@ -86,22 +86,27 @@ Expected format:
 0x...
 ```
 
-Use this address as `X402_PAY_TO` when testing a self-payment route.
+This repo currently hard-codes the demo receiver address in `src/lib/x402-payment.ts`, so no wallet address env var is required for local testing.
 
 ## Example: Pay The Local Demo Route
 
 The Coinbase Payments MCP does not call internal hosts like `localhost`, so expose the local app through a public HTTPS tunnel:
 
 ```bash
-npm run dev
+X402_MODE=live npm run dev
 npx localtunnel --port 3000
 ```
 
-Start or restart the app with the public tunnel URL in the x402 resource:
+`X402_MODE=live` enforces the paywall. If it is unset or set to `mock`, the app bypasses x402 so teammates without wallets can develop normally.
+
+For Bazaar / agentic.market indexing, live mode also needs CDP Facilitator credentials in the app environment:
 
 ```bash
-X402_RESOURCE_URL=https://your-tunnel.loca.lt/api/paid-demo npm run dev
+CDP_API_KEY_ID=...
+CDP_API_KEY_SECRET=...
 ```
+
+Those credentials are used by the server to verify and settle payments through Coinbase Developer Platform. Do not commit real values.
 
 Discover the payment requirement:
 
