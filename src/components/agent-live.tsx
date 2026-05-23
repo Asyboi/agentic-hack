@@ -260,7 +260,6 @@ function EventRow({ event }: { event: AgentEvent }) {
             <span className={styles.x402Settled}>
               <span className={styles.x402SettledMark} />
               settled
-              {event.mode === "mock" ? " · mock mode" : " · on-chain"}
             </span>
           </div>
         </div>
