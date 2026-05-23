@@ -16,7 +16,7 @@ export type PipelineOptions = {
 
 /**
  * Evaluate pipeline:
- * 1. (optional) Nimble fetch — Kyle wires nimble.ts
+ * 1. (optional) Nimble fetch — Aslan wires nimble.ts
  * 2. Senso search context → policy chunks
  * 3. LLM → structured verdict (grounded in chunks)
  * 4. Rule engine → constrain / merge matched_rules

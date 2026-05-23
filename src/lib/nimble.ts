@@ -1,6 +1,6 @@
 /**
- * Nimble policy fetcher — Kyle owns implementation.
- * Interface for live demo: fetch robots.txt, terms, privacy at runtime.
+ * Nimble policy fetcher — Aslan owns implementation.
+ * Interface for live demo: fetch robots.txt, terms, privacy (+ pricing pages) at runtime.
  */
 export type FetchedPolicy = {
   url: string;

@@ -16,8 +16,12 @@ POST /api/research     — marketplace task → plan → many verdicts → vendo
 { "agent_id": "marketplace-buyer", "task": "Find 20 PM tools...", "max_vendors": 5 }`}
       </pre>
       <p>
-        Demos: <code>npm run demo</code> (3 compliance actions) ·{" "}
-        <code>npm run demo:research</code> (PM tools marketplace task)
+        Demos: <code>npm run demo</code> · <code>npm run demo:research</code> ·{" "}
+        <a href="/api/stats">/api/stats</a>
+      </p>
+      <p style={{ fontSize: 14, color: "#666" }}>
+        Demo mode uses canned verdicts for reliability. Set{" "}
+        <code>POLICYGUARD_DEMO_MODE=false</code> + <code>SENSO_API_KEY</code> for live Senso + LLM.
       </p>
     </main>
   );

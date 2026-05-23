@@ -10,7 +10,7 @@
 | Validation | **Zod** | Request + verdict schemas match HANDOFF.md |
 | Rule engine | **Plain TypeScript** (`src/lib/rule-engine.ts`) | Deterministic, demo-friendly, no Rete/JSON Rules overhead |
 | Policy grounding | **Senso CLI** (`senso search context`) | Pre-ingested demo policies + publish to cited.md |
-| Fetch | **Nimble** (Kyle → `src/lib/nimble.ts`) | Live policy pages for narrative |
+| Fetch | **Nimble** (Aslan → `src/lib/nimble.ts`) | Live policy pages for narrative |
 | Analytics | **ClickHouse** (`@clickhouse/client` when wired) | Decision ledger |
 | Payments | **x402** (Aslan → middleware on `/evaluate`) | Agent-to-agent paywall |
 | Demo harness | **`scripts/demo-three-actions.ts`** | Reproducible 3-scenario demo without UI clicks |
@@ -72,5 +72,5 @@ npm run demo         # 3 scenarios
 3. Add `ANTHROPIC_API_KEY` for live LLM verdicts
 4. Merge rule engine output with LLM (already sketched in pipeline)
 5. ClickHouse insert one table `decisions`
-6. Aslan: x402 before handler
-7. Kyle: Nimble fetch → optional `senso kb create-raw` for one live path
+6. Kyle: x402 + marketplace on `/api/research`
+7. Aslan: Nimble fetch → optional `senso kb create-raw` for one live path (with Candy)

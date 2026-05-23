@@ -8,10 +8,13 @@
     "start": "next start",
     "demo": "tsx scripts/demo-three-actions.ts",
     "demo:research": "tsx scripts/demo-research.ts",
+    "test:senso": "tsx scripts/test-senso.ts",
+    "clickhouse:init": "tsx scripts/init-clickhouse.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
+    "@clickhouse/client": "^1.18.5",
     "ai": "^4.3.16",
     "next": "^15.3.3",
     "react": "^19.1.0",

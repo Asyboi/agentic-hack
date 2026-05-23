@@ -24,6 +24,23 @@ AI agents are taking real actions on the open web. PolicyGuard is a paid HTTP AP
 
 Built for agents to call autonomously. Payment, decision, and citation happen in one HTTP round-trip with no human in the loop.
 
+## Demo vs live (not “demo only”)
+
+The **API is real** — any agent can call `POST /api/evaluate` or `POST /api/research` in production.
+
+| Mode | Env | Behavior |
+|------|-----|----------|
+| **Demo** | `POLICYGUARD_DEMO_MODE=true` | Canned verdicts when using `x-demo-scenario` or matching demo keys — reliable for stage/video |
+| **Live** | `POLICYGUARD_DEMO_MODE=false` + keys | Senso policy chunks → Claude verdict → rule engine → optional cited.md publish → ClickHouse |
+
+```bash
+npm run demo              # 3 compliance checks (demo mode)
+npm run demo:research     # PM-tools marketplace task (demo mode)
+npm run test:senso        # verify Senso CLI + LinkedIn chunks (needs SENSO_API_KEY)
+npm run clickhouse:init   # create decisions table (needs CLICKHOUSE_URL)
+curl localhost:3000/api/stats   # decision counts
+```
+
 ## Architecture
 
 ```
@@ -50,10 +67,10 @@ Returns verdict JSON to calling agent
 
 ## Team
 
-- **Candy** — 
-- **Kyle** —
-- **Aarya** —
-- **Aslan** —
+- **Kyle** — Marketplace buyer flow + x402 paywall
+- **Aslan** — Nimble (live policy + pricing fetch)
+- **Candy** — Senso (KB, search, cited.md publish)
+- **Aarya** — API core (`/evaluate`, `/research`), pipeline, rule engine, ClickHouse, deploy
 
 ## Project plans
 

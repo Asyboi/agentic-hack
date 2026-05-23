@@ -27,7 +27,7 @@ function isPmToolsTask(task: string): boolean {
 
 /**
  * Naive planner: expands a marketplace task into concrete evaluate requests.
- * Kyle/Nimble can replace vendor discovery with live search results.
+ * Aslan/Nimble can replace vendor discovery with live search results.
  */
 export function planResearchSteps(
   input: ResearchRequest

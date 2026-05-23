@@ -26,10 +26,20 @@
 
 | Person | Owns | P0 task |
 |---|---|---|
-| **Aslan** | x402 paywall + Base Sepolia wallet | Get one green x402 test transaction by 12:30pm. Build mock-mode fallback BEFORE attempting real flow. |
-| **Kyle** | Nimble policy fetcher | Pair with Aslan on x402 first 90 min, then own Nimble integration |
-| **Aarya** | Vercel AI SDK + agent framework + verdict generation | Stub `/evaluate` endpoint with fake verdicts by 12:00pm. Then fill in tool calls. |
-| **Candy** | Senso integration | DONE — see "Senso integration" section below. Now: coordinate + demo prep. |
+| **Kyle** | Marketplace + x402 paywall | Buyer flow on `POST /api/research`; x402 on `/evaluate` or `/research` (real Sepolia receipt OR mock with receipt artifact by 12:30pm). |
+| **Aslan** | Nimble policy + content fetch | Wire [src/lib/nimble.ts](../src/lib/nimble.ts): live fetch of `policy_urls` (terms, robots) + pricing pages. Smoke test: LinkedIn ToS + Notion terms/pricing. |
+| **Aarya** | API core — `/evaluate`, pipeline, rule engine, ClickHouse, deploy | Live path on Vercel; wire Nimble hook in orchestrator when Aslan lands; ClickHouse logging. |
+| **Candy** | Senso — KB, search, cited.md publish | Org + 3 demo policies DONE. P0: `SENSO_API_KEY` on dev machines, `npm run test:senso` green, GEO prompt IDs for publish. |
+
+### Integration flow (who touches what)
+
+```
+Kyle: marketplace buyer → POST /api/research (+ x402)
+Aarya: planner → orchestrator → runEvaluatePipeline
+Aslan: nimble.fetchPolicyPages() before each evaluate step
+Candy: senso search context + engine publish → cited.md
+Aarya: rule engine + LLM verdict + ClickHouse log
+```
 
 ---
 
@@ -99,7 +109,7 @@ Single scenarios feel like "did it work?" Three scenarios show breadth, judgment
 
 ---
 
-## Senso Integration (Aarya — how to call Senso from `/evaluate`)
+## Senso Integration (Candy owns Senso; Aarya wires calls in `/evaluate`)
 
 ### From PolicyGuard's pipeline, the Senso call is one CLI invocation per request:
 
@@ -139,7 +149,7 @@ API key is in `~/.zshrc` as `SENSO_API_KEY` (Policy Guard org key, NOT the MeloM
 >
 > **PolicyGuard is the public compliance layer for the agentic web.** Watch."
 
-**[LIVE Action 1]:** Client agent autonomously pays via x402 → PolicyGuard fetches LinkedIn ToS via Nimble → Senso grounds the chunks → LLM returns BLOCKED with citation → decision logged to ClickHouse → published to cited.md
+**[LIVE Action 1]:** Kyle’s buyer agent pays via x402 → Aslan’s Nimble fetch returns LinkedIn ToS → Candy’s Senso grounds the chunks → Aarya’s pipeline returns BLOCKED with citation → ClickHouse log → cited.md publish
 
 **[LIVE Action 2]:** Same agent asks about public pricing → ALLOWED, no restrictions
 
@@ -154,7 +164,7 @@ API key is in `~/.zshrc` as `SENSO_API_KEY` (Policy Guard org key, NOT the MeloM
 
 | Risk | Trigger | Mitigation |
 |---|---|---|
-| x402 unfamiliar to team | Stuck > 90 min on testnet | Fall back to recorded real transaction + mock-mode handshake |
+| x402 unfamiliar to team | Stuck > 90 min on testnet | Kyle: mock-mode fallback + recorded receipt (see TEAM_COORDINATION.md) |
 | Demo machine flakes on stage | Live demo fails | Record full demo as video by 2:30pm, run as fallback |
 | ClickHouse not set up | Nobody owns it | Aarya spins up Cloud instance during Senso integration |
 | Tool count below 3 | ClickHouse logging slips | ClickHouse logging is P0, not P3 — at minimum log one row per decision |
