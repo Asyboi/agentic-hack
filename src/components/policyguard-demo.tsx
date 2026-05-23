@@ -2,6 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { buildCustomSiteRequest, EXAMPLE_SITES } from "@/lib/custom-site";
+import {
+  CITED_MD_CORPUS_HUB,
+  CITED_MD_LIVE_ARTICLES,
+  isValidCitedMdArticleUrl,
+} from "@/lib/cited-md-corpus";
 import { DEMO_REQUESTS } from "@/lib/demo-fixtures";
 import type { PipelineMeta } from "@/lib/pipeline";
 import type { EvaluateRequest } from "@/lib/schemas/evaluate-request";
@@ -235,10 +240,20 @@ export function PolicyGuardDemo() {
           >
             Senso KB
           </a>
+          <a href={CITED_MD_CORPUS_HUB} target="_blank" rel="noreferrer">
+            cited.md corpus (live)
+          </a>
           <a href="/api/evaluate" target="_blank" rel="noreferrer">
             API (GET)
           </a>
         </div>
+        <p className={styles.corpusNote}>
+          Senso org <code>policy-guard-3480</code> has{" "}
+          {CITED_MD_LIVE_ARTICLES.length} GEO articles on cited.md (not{" "}
+          <code>/policy-guard-3480/…</code> paths). Live{" "}
+          <code>POST /evaluate</code> can publish new verdicts as{" "}
+          <code>/article/…</code> when publish succeeds.
+        </p>
       </header>
 
       <form
@@ -262,29 +277,31 @@ export function PolicyGuardDemo() {
             </button>
           ))}
         </div>
-        <input
-          className={styles.input}
-          value={siteName}
-          onChange={(e) => setSiteName(e.target.value)}
-          placeholder="Site name (e.g. Instagram, Calm, Aurie)"
-          disabled={loading}
-        />
-        <input
-          className={styles.input}
-          value={policyUrl}
-          onChange={(e) => setPolicyUrl(e.target.value)}
-          placeholder="Policy URL (terms, privacy, robots.txt…)"
-          disabled={loading}
-        />
-        <textarea
-          id="custom-action"
-          className={styles.textarea}
-          value={customAction}
-          onChange={(e) => setCustomAction(e.target.value)}
-          placeholder="What does the agent want to do on this site?"
-          disabled={loading}
-          aria-label="Proposed agent action"
-        />
+        <div className={styles.formStack}>
+          <input
+            className={styles.input}
+            value={siteName}
+            onChange={(e) => setSiteName(e.target.value)}
+            placeholder="Site name (e.g. Instagram, Calm, Aurie)"
+            disabled={loading}
+          />
+          <input
+            className={styles.input}
+            value={policyUrl}
+            onChange={(e) => setPolicyUrl(e.target.value)}
+            placeholder="Policy URL (terms, privacy, robots.txt…)"
+            disabled={loading}
+          />
+          <textarea
+            id="custom-action"
+            className={styles.textarea}
+            value={customAction}
+            onChange={(e) => setCustomAction(e.target.value)}
+            placeholder="What does the agent want to do on this site?"
+            disabled={loading}
+            aria-label="Proposed agent action"
+          />
+        </div>
         <button type="submit" className={styles.runBtn} disabled={loading}>
           Evaluate (Nimble + rules)
         </button>
@@ -369,16 +386,24 @@ export function PolicyGuardDemo() {
         {!loading && !error && verdict && (
           <div className={styles.panelBody}>
             {pipelineMeta && (
-              <p className={styles.pipelineTag}>
-                Pipeline: {pipelineMeta.mode}
-                {pipelineMeta.demo_mode ? " · DEMO FIXTURES ON" : ""}
-                {pipelineMeta.nimble_pages_fetched > 0
-                  ? ` · nimble pages: ${pipelineMeta.nimble_pages_fetched}`
-                  : ""}
-                {pipelineMeta.senso_chunks > 0
-                  ? ` · senso chunks: ${pipelineMeta.senso_chunks}`
-                  : ""}
-              </p>
+              <>
+                <p className={styles.pipelineTag}>
+                  Pipeline: {pipelineMeta.mode}
+                  {pipelineMeta.demo_mode ? " · DEMO FIXTURES ON" : ""}
+                  {pipelineMeta.nimble_pages_fetched > 0
+                    ? ` · nimble pages: ${pipelineMeta.nimble_pages_fetched}`
+                    : ""}
+                  {pipelineMeta.senso_chunks > 0
+                    ? ` · senso chunks: ${pipelineMeta.senso_chunks}`
+                    : ""}
+                </p>
+                {pipelineMeta.nimble_errors?.length > 0 && (
+                  <p className={styles.pipelineTag} style={{ color: "#c0392b" }}>
+                    nimble failed:{" "}
+                    {pipelineMeta.nimble_errors.join(" | ")}
+                  </p>
+                )}
+              </>
             )}
             <div className={styles.verdictRow}>
               <span
@@ -461,7 +486,7 @@ export function PolicyGuardDemo() {
               </cite>
             </blockquote>
 
-            {verdict.cited_md_url && (
+            {isValidCitedMdArticleUrl(verdict.cited_md_url) && (
               <a
                 className={styles.citedLink}
                 href={verdict.cited_md_url}
@@ -470,6 +495,19 @@ export function PolicyGuardDemo() {
               >
                 Published on cited.md →
               </a>
+            )}
+            {serverStatus?.demo_mode && (
+              <p className={styles.corpusHint}>
+                Demo mode skips Senso publish. Open the live corpus:{" "}
+                {CITED_MD_LIVE_ARTICLES.map((a, i) => (
+                  <span key={a.url}>
+                    {i > 0 ? " · " : null}
+                    <a href={a.url} target="_blank" rel="noreferrer">
+                      {a.title}
+                    </a>
+                  </span>
+                ))}
+              </p>
             )}
           </div>
         )}

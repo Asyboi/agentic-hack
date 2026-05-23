@@ -118,7 +118,17 @@ export async function middleware(request: NextRequest) {
   );
 
   if (!settlement.success) {
-    return toNextResponse(settlement.response);
+    return NextResponse.json(
+      {
+        error: "x402 settlement failed",
+        reason: settlement.errorReason,
+        message: settlement.errorMessage,
+      },
+      {
+        status: settlement.response.status,
+        headers: settlement.response.headers,
+      }
+    );
   }
 
   for (const [key, value] of Object.entries(settlement.headers)) {

@@ -27,7 +27,26 @@ export async function searchPolicy(
   ]);
 
   const parsed = parseSensoJson(stdout) as { results?: PolicyChunk[] };
-  return parsed.results ?? [];
+  const all = parsed.results ?? [];
+  const filtered = all.filter((c) => !isBuildLogChunk(c));
+  return filtered.length > 0 ? filtered : all;
+}
+
+/**
+ * The Senso KB also contains hackathon onboarding / heal-report content that
+ * matches some policy queries by coincidence. Drop those so they never end up
+ * as a citation's quoted_text.
+ */
+function isBuildLogChunk(chunk: PolicyChunk): boolean {
+  const haystack = `${chunk.title ?? ""}\n${chunk.chunk_text ?? ""}`.toLowerCase();
+  return (
+    haystack.includes("content types:") ||
+    haystack.includes("drafts produced") ||
+    haystack.includes("batch run id") ||
+    haystack.includes("documents ingested") ||
+    haystack.includes("heal report") ||
+    /phase\s+\d+:/.test(haystack)
+  );
 }
 
 export async function publishDecision(
@@ -55,6 +74,21 @@ export async function publishDecision(
     "--quiet",
   ]);
 
-  const parsed = parseSensoJson(stdout) as { url?: string; citeable_url?: string };
-  return parsed.url ?? parsed.citeable_url;
+  const parsed = parseSensoJson(stdout) as {
+    url?: string;
+    citeable_url?: string;
+    external_url?: string;
+    destinations?: Array<{ external_url?: string; publisher_slug?: string }>;
+  };
+
+  const fromDestinations = parsed.destinations?.find(
+    (d) => d.publisher_slug === "cited-md" || d.external_url?.includes("cited.md")
+  )?.external_url;
+
+  return (
+    parsed.external_url ??
+    fromDestinations ??
+    parsed.url ??
+    parsed.citeable_url
+  );
 }

@@ -25,11 +25,9 @@ const EXTRACT_URL = "https://sdk.nimbleway.com/v1/extract";
 export async function fetchPolicyPage(url: string): Promise<FetchedPolicy> {
   const key = process.env.NIMBLE_API_KEY?.trim();
   if (!key) {
-    return {
-      url,
-      body: `[nimble stub] Policy text for ${url}`,
-      fetched_at: new Date().toISOString(),
-    };
+    throw new Error(
+      "NIMBLE_API_KEY is not set — add it to agentic-hack-1/.env to enable live policy fetching"
+    );
   }
 
   const res = await fetch(EXTRACT_URL, {
