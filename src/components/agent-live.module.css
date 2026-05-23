@@ -153,9 +153,88 @@
   cursor: not-allowed;
 }
 
+.modeRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  margin-top: 0.35rem;
+}
+
+.modeLabel {
+  font-family: var(--pg-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pg-text-faint);
+}
+
+.modeOption {
+  font-family: var(--pg-mono);
+  font-size: 0.78rem;
+  color: var(--pg-text-dim);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+.modeVendors {
+  font-family: var(--pg-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pg-text-faint);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.modeVendorsInput {
+  width: 3rem;
+  font-family: var(--pg-mono);
+  font-size: 0.8rem;
+  color: var(--pg-text);
+  background: var(--pg-bg);
+  border: 1px solid var(--pg-line-strong);
+  border-radius: 2px;
+  padding: 0.2rem 0.35rem;
+}
+
+.researchPanel {
+  margin: 1rem 2rem 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--pg-line);
+  background: var(--pg-surface);
+  border-radius: 2px;
+}
+
+.researchPanelTitle {
+  font-family: var(--pg-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pg-accent);
+  margin: 0 0 0.65rem;
+}
+
+.researchVendorList {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-family: var(--pg-mono);
+  font-size: 0.8rem;
+  color: var(--pg-text-dim);
+  line-height: 1.6;
+}
+
 @media (max-width: 640px) {
   .promptRow {
     padding: 0.85rem 1.25rem;
+  }
+
+  .researchPanel {
+    margin-left: 1.25rem;
+    margin-right: 1.25rem;
   }
 }
 

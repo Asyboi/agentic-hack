@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { ResearchResult } from "@/lib/schemas/research";
+import type { ResearchProgressEvent } from "@/lib/research-progress";
 import styles from "./agent-live.module.css";
+
+type RunMode = "policy" | "research";
 
 type AgentEvent =
   | { type: "thought"; text: string; ts?: string }
@@ -68,11 +72,61 @@ function decisionLabel(decision: string): string {
   return decision.toUpperCase();
 }
 
+function progressToAgentEvents(event: ResearchProgressEvent): AgentEvent[] {
+  switch (event.type) {
+    case "phase":
+      return [{ type: "thought", text: event.message }];
+    case "planned":
+      return [
+        {
+          type: "thought",
+          text: `Planner (${event.planner_mode}${event.planner_fallback ? ", fixed fallback" : ""}) → ${event.count} steps to policy-check.`,
+        },
+      ];
+    case "step_start":
+      return [
+        {
+          type: "action",
+          tool: "research_step",
+          input: {
+            target: `${event.index}/${event.total}`,
+            action: event.label,
+          },
+        },
+      ];
+    case "step_done":
+      return [
+        {
+          type: "verdict",
+          scenario: event.label,
+          verdict: event.verdict,
+        },
+      ];
+    case "vendors_start":
+      return [
+        {
+          type: "thought",
+          text: `Collecting pricing for up to ${event.count} vendor domains (when policy allows)…`,
+        },
+      ];
+    case "done":
+      return [{ type: "summary", text: event.result.summary }];
+    default:
+      return [];
+  }
+}
+
 export function AgentLive() {
   const [events, setEvents] = useState<AgentEvent[]>([]);
   const [running, setRunning] = useState(false);
   const [prompt, setPrompt] = useState("");
+  const [runMode, setRunMode] = useState<RunMode>("policy");
+  const [maxVendors, setMaxVendors] = useState(5);
+  const [researchResult, setResearchResult] = useState<ResearchResult | null>(
+    null
+  );
   const sourceRef = useRef<EventSource | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const feedRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -84,16 +138,13 @@ export function AgentLive() {
   useEffect(() => {
     return () => {
       sourceRef.current?.close();
+      abortRef.current?.abort();
     };
   }, []);
 
-  const start = useCallback(() => {
-    sourceRef.current?.close();
-    setEvents([]);
-    setRunning(true);
-
-    const url = prompt.trim()
-      ? `/api/agent-run?prompt=${encodeURIComponent(prompt.trim())}`
+  const startAgentRun = useCallback((userPrompt?: string) => {
+    const url = userPrompt
+      ? `/api/agent-run?prompt=${encodeURIComponent(userPrompt)}`
       : "/api/agent-run";
     const es = new EventSource(url);
     sourceRef.current = es;
@@ -118,8 +169,133 @@ export function AgentLive() {
     };
   }, []);
 
+  const startResearchStream = useCallback(
+    async (task: string) => {
+      const ac = new AbortController();
+      abortRef.current = ac;
+
+      try {
+        const res = await fetch("/api/research/stream", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            agent_id: "marketplace-buyer-agent",
+            task,
+            max_vendors: maxVendors,
+          }),
+          signal: ac.signal,
+        });
+
+        if (!res.ok || !res.body) {
+          const text = await res.text();
+          setEvents((prev) => [
+            ...prev,
+            {
+              type: "error",
+              message: text || `Research stream failed (${res.status})`,
+            },
+          ]);
+          setRunning(false);
+          return;
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop() ?? "";
+
+          for (const part of parts) {
+            const dataLine = part
+              .split("\n")
+              .find((l) => l.startsWith("data: "));
+            if (!dataLine) continue;
+
+            try {
+              const raw = JSON.parse(dataLine.slice(6)) as
+                | ResearchProgressEvent
+                | { type: "error"; message: string };
+
+              if (raw.type === "error") {
+                setEvents((prev) => [
+                  ...prev,
+                  { type: "error", message: raw.message },
+                ]);
+                continue;
+              }
+
+              if (raw.type === "done") {
+                setResearchResult(raw.result);
+              }
+
+              const mapped = progressToAgentEvents(raw);
+              if (mapped.length > 0) {
+                setEvents((prev) => [...prev, ...mapped]);
+              }
+            } catch {
+              /* ignore malformed */
+            }
+          }
+        }
+      } catch (e) {
+        if ((e as Error).name !== "AbortError") {
+          setEvents((prev) => [
+            ...prev,
+            {
+              type: "error",
+              message: e instanceof Error ? e.message : String(e),
+            },
+          ]);
+        }
+      } finally {
+        setRunning(false);
+        abortRef.current = null;
+      }
+    },
+    [maxVendors]
+  );
+
+  const start = useCallback(() => {
+    sourceRef.current?.close();
+    abortRef.current?.abort();
+    setEvents([]);
+    setResearchResult(null);
+    setRunning(true);
+
+    const trimmed = prompt.trim();
+
+    if (!trimmed) {
+      startAgentRun();
+      return;
+    }
+
+    if (runMode === "research") {
+      if (trimmed.length < 10) {
+        setEvents([
+          {
+            type: "error",
+            message: "Research task must be at least 10 characters.",
+          },
+        ]);
+        setRunning(false);
+        return;
+      }
+      void startResearchStream(trimmed);
+      return;
+    }
+
+    startAgentRun(trimmed);
+  }, [prompt, runMode, startAgentRun, startResearchStream]);
+
   const stop = useCallback(() => {
     sourceRef.current?.close();
+    abortRef.current?.abort();
     setRunning(false);
   }, []);
 
@@ -127,19 +303,25 @@ export function AgentLive() {
   const x402Count = events.filter((e) => e.type === "x402_settled").length;
   const status = running ? "live" : events.length > 0 ? "complete" : "idle";
   const isCustom = prompt.trim().length > 0;
+  const isResearch = isCustom && runMode === "research";
 
   return (
     <section className={styles.shell}>
       <div className={styles.header}>
         <div className={styles.titleBlock}>
-          <p className={styles.eyebrow}>Live agent — {isCustom ? "custom" : "03"}</p>
+          <p className={styles.eyebrow}>
+            Live agent —{" "}
+            {!isCustom ? "03" : isResearch ? "marketplace research" : "custom"}
+          </p>
           <h2 className={styles.title}>
             An autonomous agent, asking permission first.
           </h2>
           <p className={styles.lead}>
-            Claude plans three actions on the open web. Before each, it pays a
-            x402 toll and checks PolicyGuard, grounded in real policy text via
-            Senso. Then it decides what to do.
+            {!isCustom
+              ? "Claude plans three actions on the open web. Before each, it pays a x402 toll and checks PolicyGuard, grounded in real policy text via Senso."
+              : isResearch
+                ? "Your task runs through POST /api/research: LLM planner → policy-check each step (Nimble + Senso + rules) → vendor packet. Progress streams here; can take several minutes."
+                : "Describe one action on a site. Claude checks PolicyGuard once via /api/evaluate before deciding whether to proceed."}
           </p>
         </div>
         <div className={styles.controls}>
@@ -163,11 +345,58 @@ export function AgentLive() {
           id="agent-prompt"
           className={styles.promptArea}
           rows={2}
-          placeholder="e.g. I want to scrape Airbnb listings and store prices in a database"
+          placeholder={
+            runMode === "research"
+              ? "e.g. Find 20 PM tools under $50/user with pricing and trial links for a 50-person startup"
+              : "e.g. Find HIPAA-compliant note apps under $15/user"
+          }
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           disabled={running}
         />
+        {isCustom && (
+          <div className={styles.modeRow}>
+            <span className={styles.modeLabel}>When filled in, run as</span>
+            <label className={styles.modeOption}>
+              <input
+                type="radio"
+                name="agent-run-mode"
+                checked={runMode === "policy"}
+                onChange={() => setRunMode("policy")}
+                disabled={running}
+              />
+              Single-site policy check
+            </label>
+            <label className={styles.modeOption}>
+              <input
+                type="radio"
+                name="agent-run-mode"
+                checked={runMode === "research"}
+                onChange={() => setRunMode("research")}
+                disabled={running}
+              />
+              Marketplace research
+            </label>
+            {runMode === "research" && (
+              <label className={styles.modeVendors}>
+                max vendors
+                <input
+                  type="number"
+                  className={styles.modeVendorsInput}
+                  min={1}
+                  max={20}
+                  value={maxVendors}
+                  onChange={(e) =>
+                    setMaxVendors(
+                      Math.min(20, Math.max(1, Number(e.target.value) || 5))
+                    )
+                  }
+                  disabled={running}
+                />
+              </label>
+            )}
+          </div>
+        )}
       </div>
 
       <div className={styles.stateBar}>
@@ -185,6 +414,7 @@ export function AgentLive() {
         <span className={styles.statePill}>
           verdicts / {verdictCount.toString().padStart(2, "0")}
           {!isCustom && " of 03"}
+          {isResearch && running && " · streaming"}
         </span>
       </div>
 
@@ -201,11 +431,31 @@ export function AgentLive() {
         {events.map((e, i) => (
           <EventRow key={i} event={e} />
         ))}
+
+        {researchResult && researchResult.vendors.length > 0 && (
+          <div className={styles.researchPanel}>
+            <p className={styles.researchPanelTitle}>
+              Vendors ({researchResult.research_id})
+            </p>
+            <ul className={styles.researchVendorList}>
+              {researchResult.vendors.map((v) => (
+                <li key={v.name}>
+                  {v.name} · {v.price_per_user}
+                  {v.collected ? " · collected" : ""}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       <div className={styles.footer}>
         <span>Claude Sonnet 4 · AI SDK · x402 / Base Sepolia · Senso</span>
-        <span>POST /api/agent-run</span>
+        <span>
+          {isResearch
+            ? "POST /api/research/stream"
+            : "GET /api/agent-run (SSE)"}
+        </span>
       </div>
     </section>
   );

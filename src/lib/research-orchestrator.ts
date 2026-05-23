@@ -10,6 +10,7 @@ import {
   collectVendorPricing,
   isVendorCollectionEnabled,
 } from "@/lib/vendor-collect";
+import type { ResearchProgressEmit } from "@/lib/research-progress";
 
 function countByDecision(verdicts: Verdict[]) {
   return {
@@ -137,11 +138,25 @@ async function buildVendors(
  * Layer A orchestrator: task → planned actions → /evaluate loop → aggregate packet.
  */
 export async function runResearchOrchestrator(
-  input: ResearchRequest
+  input: ResearchRequest,
+  onProgress?: ResearchProgressEmit
 ): Promise<ResearchResult> {
   const research_id = `res_${randomUUID().slice(0, 8)}`;
+
+  await onProgress?.({
+    type: "phase",
+    message: "Planning research steps from your task…",
+  });
+
   const plan = await planResearchSteps(input);
   const { steps, vendors, planner_mode, planner_fallback } = plan;
+
+  await onProgress?.({
+    type: "planned",
+    count: steps.length,
+    planner_mode,
+    planner_fallback,
+  });
 
   console.info(
     `[research] planner=${planner_mode}${planner_fallback ? " (fallback)" : ""} → ${steps.length} steps, ${vendors.length} vendors`
@@ -158,6 +173,13 @@ export async function runResearchOrchestrator(
   );
 
   const stepResults = await mapPool(steps, concurrency, async (step, i) => {
+    await onProgress?.({
+      type: "step_start",
+      index: i + 1,
+      total: steps.length,
+      label: step.label,
+    });
+
     console.info(
       `[research] step ${i + 1}/${steps.length}: ${step.label} (live=${!demoMode})`
     );
@@ -170,6 +192,15 @@ export async function runResearchOrchestrator(
       `[research]   → ${verdict.decision} | pipeline=${meta.mode} | nimble=${meta.nimble_pages_fetched} | senso_chunks=${meta.senso_chunks}`
     );
     await logDecision(step.evaluate, verdict);
+
+    await onProgress?.({
+      type: "step_done",
+      index: i + 1,
+      total: steps.length,
+      label: step.label,
+      verdict,
+    });
+
     return {
       label: step.label,
       request: step.evaluate,
@@ -183,6 +214,12 @@ export async function runResearchOrchestrator(
 
   const counts = countByDecision(verdicts);
   const source_policy_map = buildSourcePolicyMap(steps, verdicts);
+
+  await onProgress?.({
+    type: "vendors_start",
+    count: vendors.length,
+  });
+
   const vendorResults = await buildVendors(vendors, steps, verdicts, input.task);
 
   const crmEval = evaluations.find((e) =>
@@ -201,7 +238,7 @@ export async function runResearchOrchestrator(
 
   const collectedCount = vendorResults.filter((v) => v.collected).length;
 
-  return {
+  const result: ResearchResult = {
     research_id,
     task: input.task,
     planner_mode,
@@ -235,4 +272,7 @@ export async function runResearchOrchestrator(
         crmEval?.verdict.machine_instruction.requires_human_review ?? false,
     },
   };
+
+  await onProgress?.({ type: "done", result });
+  return result;
 }

@@ -1,5 +1,6 @@
 import { AgentLive } from "@/components/agent-live";
 import { PolicyGuardDemo } from "@/components/policyguard-demo";
+import { ResearchDemo } from "@/components/research-demo";
 
 export default function Home() {
   return (
@@ -81,6 +82,35 @@ export default function Home() {
       >
         <AgentLive />
       </div>
+
+      <details
+        open
+        style={{
+          maxWidth: 1040,
+          margin: "0 auto 1rem",
+          padding: "0 1.5rem",
+        }}
+      >
+        <summary
+          style={{
+            cursor: "pointer",
+            fontFamily:
+              "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace",
+            fontSize: "0.78rem",
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color: "#8a8a93",
+            padding: "0.85rem 0",
+            borderTop: "1px solid #1f1f24",
+            borderBottom: "1px solid #1f1f24",
+            marginBottom: "1.5rem",
+            listStyle: "none",
+          }}
+        >
+          ▸ Marketplace research — custom task (POST /api/research)
+        </summary>
+        <ResearchDemo />
+      </details>
 
       <details
         style={{

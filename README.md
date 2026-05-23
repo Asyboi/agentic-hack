@@ -185,9 +185,11 @@ Writes `policy-content-ids.json` (gitignored). Restart `npm run dev` so `/api/re
 ```bash
 # .env.local: POLICYGUARD_PLANNER=llm  +  ANTHROPIC_API_KEY=sk-ant-...
 npm run demo:research
+npm run demo:research -- "Compare 3 affordable CRMs and email founders on LinkedIn"
+npm run demo:research -- --task "Find HIPAA-compliant note-taking apps under $15/user" --max-vendors 3
 ```
 
-Claude proposes action steps (G2, LinkedIn, vendor pricing, CRM, etc.) from the natural-language task; falls back to the fixed 8-step plan on error. Response includes `planner_mode` and `planner_fallback`.
+Omit the task to use the default PM-tools prompt. Claude proposes action steps from **your** task text; falls back to the fixed 8-step plan on error. Response includes `planner_mode`, planned step list, and `planner_fallback`.
 
 **Live vendor collection (after LLM planner):**
 
