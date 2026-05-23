@@ -17,6 +17,8 @@ export function middleware() {
 }
 
 export const config = {
-  matcher: [] as string[],
+  // Must be a plain array literal — Next.js parses `config` at build time and
+  // rejects TypeScript nodes like `as string[]` ("TsAsExpression").
+  matcher: [],
   runtime: "nodejs",
 };

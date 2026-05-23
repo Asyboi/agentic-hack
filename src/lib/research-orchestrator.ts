@@ -60,8 +60,16 @@ async function buildVendors(
   task: string
 ): Promise<ResearchResult["vendors"]> {
   type Row = ResearchResult["vendors"][number] & { _domain: string };
+  /** Intermediate join of catalog + planned step + verdict (not a vendor row yet). */
+  type VendorWorkRow = {
+    _domain: string;
+    vendor: VendorCatalogEntry;
+    step: PlannedStep;
+    verdict: Verdict;
+    allowed: boolean;
+  };
 
-  const rows: Row[] = vendors
+  const rows: VendorWorkRow[] = vendors
     .map((v) => {
       const idx = steps.findIndex(
         (s) => s.kind === "vendor" && s.evaluate.target.domain === v.domain
