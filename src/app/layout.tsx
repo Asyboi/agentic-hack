@@ -1,5 +1,12 @@
 import type { Metadata } from "next";
+import { IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
+
+const ibmPlex = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "PolicyGuard — Live demo",
@@ -15,15 +22,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        style={
-          {
-            "--font-body":
-              '"IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-            "--bg": "#0c0f14",
-            "--text": "#e8edf5",
-            "--accent": "#5b9fd4",
-          } as React.CSSProperties
-        }
+        className={ibmPlex.className}
+        style={{
+          margin: 0,
+          minHeight: "100vh",
+          backgroundColor: "#0c0f14",
+          color: "#e8edf5",
+        }}
       >
         {children}
       </body>

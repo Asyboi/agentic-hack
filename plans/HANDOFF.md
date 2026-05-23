@@ -68,7 +68,7 @@ PolicyGuard's `/evaluate` endpoint returns this JSON. Machine-readable for agent
     "policy_section": "Dos and Don'ts",
     "fetched_at": "2026-05-23T15:30:00Z"
   },
-  "cited_md_url": "https://cited.md/policy-guard-3480/<decision-slug>"
+  "cited_md_url": "https://cited.md/article/<seo-slug-from-publish>"
 }
 ```
 

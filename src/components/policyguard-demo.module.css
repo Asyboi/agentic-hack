@@ -267,6 +267,25 @@
   color: var(--muted);
 }
 
+.corpusNote {
+  margin: 0.75rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.45;
+  max-width: 52rem;
+}
+
+.corpusHint {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.corpusHint a {
+  color: var(--accent);
+}
+
 .citedLink {
   display: inline-block;
   margin-top: 1rem;
@@ -279,12 +298,21 @@
   font-size: 0.9rem;
 }
 
+.formStack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
 .custom {
   margin-bottom: 1.5rem;
   padding: 1.1rem 1.2rem;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .customLabel {
@@ -410,7 +438,7 @@
   background: var(--surface2);
   color: var(--text);
   font: inherit;
-  margin-bottom: 0.65rem;
+  margin: 0;
 }
 
 .input:focus {

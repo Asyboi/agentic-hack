@@ -55,6 +55,21 @@ export async function publishDecision(
     "--quiet",
   ]);
 
-  const parsed = parseSensoJson(stdout) as { url?: string; citeable_url?: string };
-  return parsed.url ?? parsed.citeable_url;
+  const parsed = parseSensoJson(stdout) as {
+    url?: string;
+    citeable_url?: string;
+    external_url?: string;
+    destinations?: Array<{ external_url?: string; publisher_slug?: string }>;
+  };
+
+  const fromDestinations = parsed.destinations?.find(
+    (d) => d.publisher_slug === "cited-md" || d.external_url?.includes("cited.md")
+  )?.external_url;
+
+  return (
+    parsed.external_url ??
+    fromDestinations ??
+    parsed.url ??
+    parsed.citeable_url
+  );
 }

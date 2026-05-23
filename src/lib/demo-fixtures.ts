@@ -111,7 +111,6 @@ export const DEMO_VERDICTS: Record<string, Verdict> = {
       policy_section: "Dos and Don'ts",
       fetched_at: new Date().toISOString(),
     },
-    cited_md_url: "https://cited.md/policy-guard-3480/linkedin-scrape-blocked",
   },
   pricing_read: {
     decision: "allowed",
@@ -130,7 +129,6 @@ export const DEMO_VERDICTS: Record<string, Verdict> = {
         "No prohibition found for low-volume automated reading of public pricing information.",
       fetched_at: new Date().toISOString(),
     },
-    cited_md_url: "https://cited.md/policy-guard-3480/openai-pricing-allowed",
   },
   email_crm: {
     decision: "modify_recommended",
@@ -155,6 +153,5 @@ export const DEMO_VERDICTS: Record<string, Verdict> = {
       policy_section: "Personal Data",
       fetched_at: new Date().toISOString(),
     },
-    cited_md_url: "https://cited.md/policy-guard-3480/email-crm-modify",
   },
 };

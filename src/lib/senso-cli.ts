@@ -1,7 +1,7 @@
-import { exec } from "node:child_process";
+import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 const NPM_GLOBAL_BIN = `${process.env.HOME}/.npm-global/bin`;
 
@@ -15,17 +15,17 @@ function shellEnv(): NodeJS.ProcessEnv {
 /** Prefer global `senso`, fall back to `npx @senso-ai/cli` (no global install needed). */
 export async function runSensoCli(args: string[]): Promise<string> {
   const preferNpx = process.env.SENSO_CLI === "npx";
-  const attempts = preferNpx
-    ? [`npx --yes @senso-ai/cli ${args.join(" ")}`]
+  const attempts: [string, string[]][] = preferNpx
+    ? [["npx", ["--yes", "@senso-ai/cli", ...args]]]
     : [
-        `senso ${args.join(" ")}`,
-        `npx --yes @senso-ai/cli ${args.join(" ")}`,
+        ["senso", args],
+        ["npx", ["--yes", "@senso-ai/cli", ...args]],
       ];
 
   let lastError: unknown;
-  for (const cmd of attempts) {
+  for (const [bin, argv] of attempts) {
     try {
-      const { stdout } = await execAsync(cmd, {
+      const { stdout } = await execFileAsync(bin, argv, {
         env: shellEnv(),
         maxBuffer: 10 * 1024 * 1024,
       });
